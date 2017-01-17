@@ -1,8 +1,11 @@
 # Evolixir
 
-**TODO: Add description**
+Evolixir is based on the DXNN system written in Erlang.
 
-## Installation
+The project is still in development. To see a working system look at [NeuralFish](https://github.com/JeremyBellows/NeuralFish) or [DXNN](https://github.com/CorticalComputer/DXNN2)
+
+## (NOT YET AVAILABLE) Installation
+NOT YET AVAILABLE
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
 

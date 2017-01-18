@@ -8,7 +8,21 @@ end
 
 defmodule Neuron do
   use GenServer
-  defstruct barrier: Map.new(), inbound_connections: Map.new(), outbound_connections: Map.new()
+  defstruct barrier: Map.new(), inbound_connections: Map.new(), outbound_connections: []
+
+  def add_inbound_connection(inbound_connections, from_node_pid, new_connection_id, weight) do
+    connections_from_node_pid = Map.get(inbound_connections, from_node_pid, [])
+    new_inbound_connection = %InboundNeuronConnection{connection_id: new_connection_id, weight: weight}
+    updated_connections_from_node_pid =
+      connections_from_node_pid ++ [new_inbound_connection]
+    Map.put(inbound_connections, from_node_pid, updated_connections_from_node_pid)
+  end
+
+  def add_outbound_connection(outbound_connections, from_node_pid, weight, to_node_pid) do
+    connection_id = Enum.count(outbound_connections) + 1
+    GenServer.call(to_node_pid, {:add_inbound_connection, from_node_pid, connection_id, weight})
+    outbound_connections ++ [to_node_pid]
+  end
 
   def send_synapse_to_outbound_connection(synapse, outbound_pid) do
     GenServer.cast(outbound_pid, {:receive_synapse, synapse})
@@ -16,7 +30,7 @@ defmodule Neuron do
 
   def send_synapse_to_outbound_connections(synapse, outbound_connections) do
     process_connection =
-      (fn {connection_id, pid} ->
+      (fn pid ->
         send_synapse_to_outbound_connection(synapse, pid)
       end)
     Enum.each(outbound_connections, process_connection)

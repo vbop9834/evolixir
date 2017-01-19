@@ -55,32 +55,36 @@ defmodule Evolixir.NeuronTest do
     empty_inbound_connections = Map.new()
     from_node_pid = 5
     weight = 2.3
-    inbound_connections_with_new_inbound = Neuron.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
+    {inbound_connections_with_new_inbound, new_connection_id} = Neuron.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
 
     connections_from_node_pid = Map.get(inbound_connections_with_new_inbound, from_node_pid)
 
+    assert new_connection_id == 1
     assert Enum.count(connections_from_node_pid) == 1
 
     connection_from_node_pid = List.first(connections_from_node_pid)
-    assert connection_from_node_pid.connection_id == 1
+    assert connection_from_node_pid.connection_id == new_connection_id
     assert connection_from_node_pid.weight == weight
   end
 
   test "add_outbound_connection should add an outbound connection" do
     outbound_connections = []
     to_node_pid = 3
-    updated_outbound_connections = Neuron.add_outbound_connection(outbound_connections, to_node_pid)
+    connection_id = 1
+    updated_outbound_connections = Neuron.add_outbound_connection(outbound_connections, to_node_pid, connection_id)
 
     assert Enum.count(updated_outbound_connections) == 1
 
-    [outbound_connection_to_pid] = updated_outbound_connections
+    [{outbound_connection_to_pid, outbound_connection_id}] = updated_outbound_connections
     assert outbound_connection_to_pid == to_node_pid
+    assert connection_id == outbound_connection_id
   end
 
   test ":add_outbound_connection message should return :ok if successful" do
     {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
     to_node_pid = 0
-    returned_atom = GenServer.call(neuron_pid, {:add_outbound_connection, to_node_pid})
+    connection_id = 1
+    returned_atom = GenServer.call(neuron_pid, {:add_outbound_connection, {to_node_pid, connection_id}})
     assert returned_atom == :ok
   end
 
@@ -88,7 +92,22 @@ defmodule Evolixir.NeuronTest do
     {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
     from_node_pid = 0
     weight = 0.0
-    returned_atom = GenServer.call(neuron_pid, {:add_inbound_connection, {from_node_pid, weight}})
+    {returned_atom, connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {from_node_pid, weight}})
     assert returned_atom == :ok
+    assert connection_id == 1
+  end
+
+  test "calculate_output_value should calculate output value from full barrier" do
+    first_synapse = %Synapse{value: 1.5}
+    second_synapse = %Synapse{value: 2.5}
+    barrier =
+      %{
+        1 => first_synapse,
+        2 => second_synapse
+      }
+    output_value = Neuron.calculate_output_value(barrier)
+
+    expected_value = first_synapse.value + second_synapse.value
+    assert output_value == expected_value
   end
 end

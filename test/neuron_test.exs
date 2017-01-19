@@ -1,18 +1,34 @@
+defmodule NeuronTestHelper do
+  use GenServer
+  defstruct received_synapses: {}
+
+  def handle_cast({:receive_synapse, synapse}, state) do
+    updated_received_synapses = Tuple.append(state.received_synapses, synapse)
+    updated_state = %NeuronTestHelper{state | received_synapses: updated_received_synapses}
+    {:noreply, updated_state}
+  end
+
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
+  end
+end
+
 defmodule Evolixir.NeuronTest do
   use ExUnit.Case
   doctest Neuron
 
   test "is_barrier_full? Should return true if barrier is full" do
-    fake_inbound_connection =
-      %InboundNeuronConnection{connection_id: 1}
-    connections_from_node_one = [fake_inbound_connection]
+    connection_id = 9
+    weight = 2.0
+    connections_from_node_one = Map.put(Map.new(), connection_id, weight)
+    from_node_id = 1
     inbound_connections =
       %{
-        1 => connections_from_node_one
+        from_node_id => connections_from_node_one
       }
     barrier =
       %{
-        1 => %Synapse{}
+        {from_node_id, connection_id} => %Synapse{}
       }
     barrier_is_full =
       Neuron.is_barrier_full?(barrier, inbound_connections)
@@ -21,15 +37,13 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "is_barrier_full? Should return true if barrier is not full" do
-    fake_inbound_connection =
-      %InboundNeuronConnection{connection_id: 1}
-    fake_inbound_connection_two =
-      %InboundNeuronConnection{connection_id: 2}
+    fake_inbound_connection_id = 1
+    fake_inbound_connection_id_two = 2
     connections_from_node_one =
-      [
-        fake_inbound_connection,
-        fake_inbound_connection_two
-      ]
+      %{
+        fake_inbound_connection_id => 0.0,
+        fake_inbound_connection_id_two => 0.2
+      }
     inbound_connections =
       %{
         1 => connections_from_node_one
@@ -61,10 +75,10 @@ defmodule Evolixir.NeuronTest do
 
     assert new_connection_id == 1
     assert Enum.count(connections_from_node_pid) == 1
+    assert Map.has_key?(connections_from_node_pid, new_connection_id) == true
 
-    connection_from_node_pid = List.first(connections_from_node_pid)
-    assert connection_from_node_pid.connection_id == new_connection_id
-    assert connection_from_node_pid.weight == weight
+    connection_weight = Map.get(connections_from_node_pid, new_connection_id)
+    assert connection_weight == weight
   end
 
   test "add_outbound_connection should add an outbound connection" do
@@ -109,5 +123,27 @@ defmodule Evolixir.NeuronTest do
 
     expected_value = first_synapse.value + second_synapse.value
     assert output_value == expected_value
+  end
+
+  test "Upon receiving a synapse, if the updated_barrier is full then the Neuron should send a synapse to its outbound connections" do
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NeuronTestHelper,%NeuronTestHelper{})
+    fake_from_node_id = 5
+    weight = 1.0
+    fake_test_helper_connection_id = 9
+    {:ok, neuron_inbound_connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
+    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
+    artificial_synapse = %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
+    :ok = GenServer.cast(neuron_pid, {:receive_synapse, artificial_synapse})
+
+    #TODO find a better way to wait for the async op
+    :timer.sleep(50)
+    updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 1
+
+    {received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == fake_test_helper_connection_id
+    assert received_synapse.value == 1.0
+    assert received_synapse.from_node_id == neuron_pid
   end
 end

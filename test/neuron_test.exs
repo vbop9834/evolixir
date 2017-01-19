@@ -1,26 +1,3 @@
-defmodule NeuronTestHelper do
-  use GenServer
-  defstruct times_fired: 0
-
-  def init(args) do
-    {:ok, args}
-  end
-
-  def handle_call(:get_times_fired, _from, state) do
-    {:reply, state.times_fired}
-  end
-
-  def handle_cast({:receive_synapse, synapse}, state) do
-    updated_times_fired = state.times_fired+1
-    updated_state =
-      %{ state |
-         times_fired: updated_times_fired
-       }
-    {:noreply, updated_state}
-  end
-
-end
-
 defmodule Evolixir.NeuronTest do
   use ExUnit.Case
   doctest Neuron
@@ -77,16 +54,26 @@ defmodule Evolixir.NeuronTest do
   test "add_inbound_connections should add the supplied pid and weight as an inbound connection" do
     empty_inbound_connections = Map.new()
     from_node_pid = 5
-    new_connection_id = 1
     weight = 2.3
-    inbound_connections_with_new_inbound = Neuron.add_inbound_connection(empty_inbound_connections, from_node_pid, new_connection_id, weight)
+    inbound_connections_with_new_inbound = Neuron.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
 
     connections_from_node_pid = Map.get(inbound_connections_with_new_inbound, from_node_pid)
 
     assert Enum.count(connections_from_node_pid) == 1
 
     connection_from_node_pid = List.first(connections_from_node_pid)
-    assert connection_from_node_pid.connection_id == new_connection_id
+    assert connection_from_node_pid.connection_id == 1
     assert connection_from_node_pid.weight == weight
+  end
+
+  test "add_outbound_connection should add an outbound connection" do
+    outbound_connections = []
+    to_node_pid = 3
+    updated_outbound_connections = Neuron.add_outbound_connection(outbound_connections, to_node_pid)
+
+    assert Enum.count(updated_outbound_connections) == 1
+
+    [outbound_connection_to_pid] = updated_outbound_connections
+    assert outbound_connection_to_pid == to_node_pid
   end
 end

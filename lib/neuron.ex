@@ -52,6 +52,18 @@ defmodule Neuron do
     %Synapse{synapse | value: weighted_value}
   end
 
+  def handle_call({:add_outbound_connection, to_node_pid}, _from, state) do
+    updated_outbound_connections = add_outbound_connection(state.outbound_connections, to_node_pid)
+    updated_state = %Neuron{state | outbound_connections: updated_outbound_connections}
+    {:reply, :ok, updated_state}
+  end
+
+  def handle_call({:add_inbound_connection, {from_node_pid, weight}}, _from, state) do
+    updated_inbound_connections = add_inbound_connection(state.inbound_connections, from_node_pid, weight)
+    updated_state = %Neuron{state | inbound_connections: updated_inbound_connections}
+    {:reply, :ok, updated_state}
+  end
+
   def handle_cast({:receive_synapse, synapse}, state) do
     #TODO pattern match error here if nil
     inbound_connection_weight =

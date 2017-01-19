@@ -76,4 +76,19 @@ defmodule Evolixir.NeuronTest do
     [outbound_connection_to_pid] = updated_outbound_connections
     assert outbound_connection_to_pid == to_node_pid
   end
+
+  test ":add_outbound_connection message should return :ok if successful" do
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
+    to_node_pid = 0
+    returned_atom = GenServer.call(neuron_pid, {:add_outbound_connection, to_node_pid})
+    assert returned_atom == :ok
+  end
+
+  test ":add_inbound_connection message should return :ok if successful" do
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
+    from_node_pid = 0
+    weight = 0.0
+    returned_atom = GenServer.call(neuron_pid, {:add_inbound_connection, {from_node_pid, weight}})
+    assert returned_atom == :ok
+  end
 end

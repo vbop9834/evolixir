@@ -2,9 +2,19 @@ defmodule Synapse do
   defstruct connection_id: nil, from_node_id: nil, value: 0.0
 end
 
+defmodule ActivationFunction do
+  def id(x) do
+    x
+  end
+
+  def sigmoid(x) do
+    1.0 / (1.0 + :math.exp(-x))
+  end
+end
+
 defmodule Neuron do
   use GenServer
-  defstruct barrier: Map.new(), inbound_connections: Map.new(), outbound_connections: []
+  defstruct barrier: Map.new(), inbound_connections: Map.new(), outbound_connections: [], activation_function: &ActivationFunction.sigmoid/1
 
   def add_inbound_connection(inbound_connections, from_node_pid, weight) do
     connections_from_node_pid = Map.get(inbound_connections, from_node_pid, Map.new())
@@ -55,7 +65,7 @@ defmodule Neuron do
     %Synapse{synapse | value: weighted_value}
   end
 
-  def calculate_output_value(full_barrier) do
+  def calculate_output_value(full_barrier, activation_function) do
     #TODO add activation function
     get_synapse_value =
     (fn {_, synapse} ->
@@ -64,6 +74,7 @@ defmodule Neuron do
 
     Enum.map(full_barrier, get_synapse_value)
     |> Enum.sum
+    |> activation_function.()
   end
 
   def handle_call({:add_outbound_connection, {to_node_pid, connection_id}}, _from, state) do
@@ -92,7 +103,7 @@ defmodule Neuron do
     updated_state =
       #check if barrier is full
       if is_barrier_full?(updated_barrier, state.inbound_connections) do
-        output_value = calculate_output_value(updated_barrier)
+        output_value = calculate_output_value(updated_barrier, state.activation_function)
         send_output_value_to_outbound_connections(self(), output_value, state.outbound_connections)
         %Neuron{state |
                 barrier: Map.new()

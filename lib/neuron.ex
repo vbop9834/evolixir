@@ -14,7 +14,10 @@ end
 
 defmodule Neuron do
   use GenServer
-  defstruct barrier: Map.new(), inbound_connections: Map.new(), outbound_connections: [], activation_function: &ActivationFunction.sigmoid/1
+  defstruct barrier: Map.new(),
+    inbound_connections: Map.new(),
+    outbound_connections: [],
+    activation_function: &ActivationFunction.sigmoid/1
 
   def add_inbound_connection(inbound_connections, from_node_pid, weight) do
     connections_from_node_pid = Map.get(inbound_connections, from_node_pid, Map.new())

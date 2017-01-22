@@ -1,5 +1,7 @@
 defmodule Synapse do
-  defstruct connection_id: nil, from_node_id: nil, value: 0.0
+  defstruct connection_id: nil,
+    from_node_id: nil,
+    value: 0.0
 end
 
 defmodule ActivationFunction do
@@ -19,18 +21,9 @@ defmodule Neuron do
     outbound_connections: [],
     activation_function: &ActivationFunction.sigmoid/1
 
-  def add_inbound_connection(inbound_connections, from_node_pid, weight) do
-    connections_from_node_pid = Map.get(inbound_connections, from_node_pid, Map.new())
-    new_connection_id = Enum.count(connections_from_node_pid) + 1
-    updated_connections_from_node_pid =
-      Map.put(connections_from_node_pid, new_connection_id, weight)
-    updated_inbound_connections =
-      Map.put(inbound_connections, from_node_pid, updated_connections_from_node_pid)
-    {updated_inbound_connections, new_connection_id}
-  end
-
-  def add_outbound_connection(outbound_connections, to_node_pid, connection_id) do
-    outbound_connections ++ [{to_node_pid, connection_id}]
+  def apply_weight_to_synapse(synapse, inbound_connection_weight) do
+    weighted_value = synapse.value * inbound_connection_weight
+    %Synapse{synapse | value: weighted_value}
   end
 
   def send_synapse_to_outbound_connection(synapse, outbound_pid) do
@@ -39,33 +32,16 @@ defmodule Neuron do
 
   def send_output_value_to_outbound_connections(from_node_pid, output_value, outbound_connections) do
     process_connection =
-      (fn {to_node_pid, connection_id} ->
-        synapse_to_send =
-          %Synapse{
-            connection_id: connection_id,
-            from_node_id: from_node_pid,
-            value: output_value
-          }
-        send_synapse_to_outbound_connection(synapse_to_send, to_node_pid)
-      end)
+    (fn {to_node_pid, connection_id} ->
+      synapse_to_send =
+        %Synapse{
+          connection_id: connection_id,
+          from_node_id: from_node_pid,
+          value: output_value
+        }
+      send_synapse_to_outbound_connection(synapse_to_send, to_node_pid)
+    end)
     Enum.each(outbound_connections, process_connection)
-  end
-
-  def is_barrier_full?(barrier, inbound_connections) do
-    connection_is_in_barrier? =
-      (fn {from_node_id, connections_from_node} ->
-        find_connection_in_barrier =
-          (fn {connection_id, _weight} ->
-            Map.has_key?(barrier, {from_node_id, connection_id})
-          end)
-        Enum.all?(connections_from_node, find_connection_in_barrier)
-      end)
-    Enum.all?(inbound_connections, connection_is_in_barrier?)
-  end
-
-  def apply_weight_to_synapse(synapse, inbound_connection_weight) do
-    weighted_value = synapse.value * inbound_connection_weight
-    %Synapse{synapse | value: weighted_value}
   end
 
   def calculate_output_value(full_barrier, activation_function) do
@@ -81,14 +57,14 @@ defmodule Neuron do
   end
 
   def handle_call({:add_outbound_connection, {to_node_pid, connection_id}}, _from, state) do
-    updated_outbound_connections = add_outbound_connection(state.outbound_connections, to_node_pid, connection_id)
+    updated_outbound_connections = Node.add_outbound_connection(state.outbound_connections, to_node_pid, connection_id)
     updated_state = %Neuron{state | outbound_connections: updated_outbound_connections}
     {:reply, :ok, updated_state}
   end
 
   def handle_call({:add_inbound_connection, {from_node_pid, weight}}, _from, state) do
     {updated_inbound_connections, new_inbound_connection_id} =
-      add_inbound_connection(state.inbound_connections, from_node_pid, weight)
+      Node.add_inbound_connection(state.inbound_connections, from_node_pid, weight)
     updated_state = %Neuron{state | inbound_connections: updated_inbound_connections}
     {:reply, {:ok, new_inbound_connection_id} , updated_state}
   end
@@ -105,7 +81,7 @@ defmodule Neuron do
       Map.put(state.barrier, {weighted_synapse.from_node_id, weighted_synapse.connection_id}, weighted_synapse)
     updated_state =
       #check if barrier is full
-      if is_barrier_full?(updated_barrier, state.inbound_connections) do
+      if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
         output_value = calculate_output_value(updated_barrier, state.activation_function)
         send_output_value_to_outbound_connections(self(), output_value, state.outbound_connections)
         %Neuron{state |

@@ -17,7 +17,7 @@ defmodule Evolixir.SensorTest do
 
   test "send_synapse_to_outbound_connection should send a synapse to the supplied pid" do
     data = 0.38
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id = 5
 
     Sensor.send_synapse_to_outbound_connection(data, to_node_pid, connection_id)
@@ -33,7 +33,7 @@ defmodule Evolixir.SensorTest do
 
   test "process_sensor_data should process all of the outbound_connections" do
     sensor_data = [1, 2, 3]
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
@@ -66,7 +66,7 @@ defmodule Evolixir.SensorTest do
 
   test "process_sensor_data should send 0.0 when out of sensor_data" do
     sensor_data = [1]
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
@@ -100,7 +100,7 @@ defmodule Evolixir.SensorTest do
   test "synchronize should execute the sync_function and process the data" do
     sensor_data = [1, 2, 3]
     sync_function = fn () -> sensor_data end
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
@@ -134,7 +134,7 @@ defmodule Evolixir.SensorTest do
   test "synchronize should execute the sync_function and send 0.0 when no data is provided" do
     sensor_data = []
     sync_function = fn () -> sensor_data end
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
@@ -168,7 +168,7 @@ defmodule Evolixir.SensorTest do
   test ":synchronize should send sensor data synapses to outbound nodes" do
     sensor_data = [1, 2, 3]
     sync_function = fn () -> sensor_data end
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
@@ -203,7 +203,7 @@ defmodule Evolixir.SensorTest do
   test ":synchronize should send blank sensor data synapses to outbound nodes when no sensor data is available" do
     sensor_data = []
     sync_function = fn () -> sensor_data end
-    {:ok, to_node_pid} = GenServer.start_link(NeuronTestHelper, %NeuronTestHelper{})
+    {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6

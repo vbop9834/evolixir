@@ -94,4 +94,16 @@ defmodule Neuron do
       end
     {:noreply, updated_state}
   end
+
+  def handle_cast({:receive_blank_synapse, synapse}, state) do
+    #TODO pattern match error here if nil
+    updated_barrier =
+      Map.put(state.barrier, {synapse.from_node_id, synapse.connection_id}, synapse)
+    updated_state =
+      %Neuron{state |
+              barrier: updated_barrier
+             }
+    {:noreply, updated_state}
+  end
+
 end

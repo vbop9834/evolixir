@@ -40,4 +40,14 @@ defmodule Actuator do
     {:noreply, updated_state}
   end
 
+  def handle_cast({:receive_blank_synapse, synapse}, state) do
+    updated_barrier =
+      Map.put(state.barrier, {synapse.from_node_id, synapse.connection_id}, synapse)
+    updated_state =
+      %Actuator{state |
+                barrier: updated_barrier
+               }
+    {:noreply, updated_state}
+  end
+
 end

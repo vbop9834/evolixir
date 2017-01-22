@@ -57,7 +57,8 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "Upon receiving a synapse, if the updated_barrier is full then the Neuron should send a synapse to its outbound connections" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: &ActivationFunction.sigmoid/1})
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
     fake_from_node_id = 5
     weight = 1.0
@@ -79,7 +80,8 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "Upon receiving a synapse, if the updated_barrier is not full then the Neuron should not send a synapse to its outbound connections" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: &ActivationFunction.sigmoid/1})
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
     fake_from_node_id = 5
     weight = 1.0
@@ -99,7 +101,8 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "Upon receiving a synapse, if the updated_barrier is full with two expected synapses then the Neuron should send a synapse to its outbound connections" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: &ActivationFunction.sigmoid/1})
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
 
     fake_from_node_id = 5
@@ -130,7 +133,8 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "Upon receiving a blank synapse, Neuron should not activate" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: &ActivationFunction.sigmoid/1})
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
     fake_from_node_id = 5
     weight = 1.0
@@ -147,7 +151,8 @@ defmodule Evolixir.NeuronTest do
   end
 
   test "Upon receiving a blank synapse, Neuron should not activate with two inbound connections" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: &ActivationFunction.sigmoid/1})
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
     fake_from_node_id = 5
     weight = 1.0

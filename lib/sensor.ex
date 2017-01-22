@@ -1,7 +1,7 @@
 defmodule Sensor do
   use GenServer
   defstruct outbound_connections: [],
-    sync_function: nil
+    sync_function: {0, nil}
 
   def add_outbound_connection(outbound_connections, to_node_pid, connection_id) do
     outbound_connections ++ [{to_node_pid, connection_id}]
@@ -43,7 +43,8 @@ defmodule Sensor do
   end
 
   def handle_call(:synchronize, _from, state) do
-    synchronize(state.sync_function, state.outbound_connections)
+    {_sync_function_id, sync_function} = state.sync_function
+    synchronize(sync_function, state.outbound_connections)
     {:reply, :ok, state}
   end
 

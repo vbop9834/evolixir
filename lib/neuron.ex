@@ -19,7 +19,7 @@ defmodule Neuron do
   defstruct barrier: Map.new(),
     inbound_connections: Map.new(),
     outbound_connections: [],
-    activation_function: &ActivationFunction.sigmoid/1
+    activation_function: {:sigmoid, &ActivationFunction.sigmoid/1}
 
   def apply_weight_to_synapse(synapse, inbound_connection_weight) do
     weighted_value = synapse.value * inbound_connection_weight
@@ -82,7 +82,8 @@ defmodule Neuron do
     updated_state =
       #check if barrier is full
       if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
-        output_value = calculate_output_value(updated_barrier, state.activation_function)
+        {_activation_function_id, activation_function} = state.activation_function
+        output_value = calculate_output_value(updated_barrier, activation_function)
         send_output_value_to_outbound_connections(self(), output_value, state.outbound_connections)
         %Neuron{state |
                 barrier: Map.new()

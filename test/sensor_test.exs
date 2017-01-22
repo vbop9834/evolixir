@@ -167,7 +167,7 @@ defmodule Evolixir.SensorTest do
 
   test ":synchronize should send sensor data synapses to outbound nodes" do
     sensor_data = [1, 2, 3]
-    sync_function = fn () -> sensor_data end
+    sync_function = {0, fn () -> sensor_data end}
     {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3
@@ -202,7 +202,7 @@ defmodule Evolixir.SensorTest do
 
   test ":synchronize should send blank sensor data synapses to outbound nodes when no sensor data is available" do
     sensor_data = []
-    sync_function = fn () -> sensor_data end
+    sync_function = {0, fn () -> sensor_data end}
     {:ok, to_node_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     connection_id_one = 8
     connection_id_two = 3

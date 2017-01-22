@@ -31,12 +31,12 @@ defmodule Evolixir.ActuatorTest do
   test ":receive_synapse should activate Actuator if barrier is full" do
     {:ok, actuator_test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
 
-    activate_function =
-    fn output_value ->
+    actuator_function =
+    {0, fn output_value ->
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
-    end
+    end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{activate_function: activate_function})
+    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
 
     fake_node_pid = 9
     {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
@@ -58,12 +58,12 @@ defmodule Evolixir.ActuatorTest do
   test ":receive_synapse should activate Actuator if barrier is full with two expected inbound connections" do
     {:ok, actuator_test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
 
-    activate_function =
-    fn output_value ->
+    actuator_function =
+    {0, fn output_value ->
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
-    end
+    end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{activate_function: activate_function})
+    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
 
     fake_node_pid = 9
     {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
@@ -93,12 +93,12 @@ defmodule Evolixir.ActuatorTest do
   test ":receive_blank_synapse should not activate Actuator if barrier is full" do
     {:ok, actuator_test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
 
-    activate_function =
-    fn output_value ->
+    actuator_function =
+    {0, fn output_value ->
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
-    end
+    end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{activate_function: activate_function})
+    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
 
     fake_node_pid = 9
     {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
@@ -119,12 +119,12 @@ defmodule Evolixir.ActuatorTest do
   test ":receive_blank_synapse should not activate Actuator if barrier is full with two inbound connections" do
     {:ok, actuator_test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
 
-    activate_function =
-    fn output_value ->
+    actuator_function =
+    {0, fn output_value ->
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
-    end
+    end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{activate_function: activate_function})
+    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
 
     fake_node_pid = 9
     {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})

@@ -2,7 +2,7 @@ defmodule Actuator do
   use GenServer
   defstruct inbound_connections: Map.new(),
     barrier: Map.new(),
-    activate_function: nil
+    actuator_function: {0, nil}
 
   def calculate_output_value(barrier) do
     get_synapse_value =
@@ -27,8 +27,9 @@ defmodule Actuator do
     updated_state =
     #check if barrier is full
     if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
+      {_actuator_function_id, actuator_function} = state.actuator_function
       calculate_output_value(updated_barrier)
-      |> state.activate_function.()
+      |> actuator_function.()
       %Actuator{state |
               barrier: Map.new()
       }

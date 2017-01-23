@@ -128,9 +128,9 @@ defmodule Evolixir.ActuatorTest do
 
     fake_node_pid = 75
 
-    {inbound_connections_count_one, _connection_id} =
+    {inbound_connections_count_one, connection_id} =
       Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
-    {inbound_connections, _connection_id_two} =
+    {inbound_connections, connection_id_two} =
       Node.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
@@ -138,9 +138,6 @@ defmodule Evolixir.ActuatorTest do
         actuator_function: actuator_function,
         inbound_connections: inbound_connections
       })
-
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
-    {:ok, connection_id_two} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
 
     artificial_synapse = %Synapse{
       connection_id: connection_id,

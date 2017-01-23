@@ -9,23 +9,6 @@ defmodule Evolixir.NeuronTest do
     assert weighted_synapse.value == 5.0
   end
 
-  test ":add_inbound_connection message should return :ok if successful" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
-    from_node_pid = 0
-    weight = 0.0
-    {returned_atom, connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {from_node_pid, weight}})
-    assert returned_atom == :ok
-    assert connection_id == 1
-  end
-
-  test ":add_outbound_connection message should return :ok if successful" do
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{})
-    to_node_pid = 0
-    connection_id = 1
-    returned_atom = GenServer.call(neuron_pid, {:add_outbound_connection, {to_node_pid, connection_id}})
-    assert returned_atom == :ok
-  end
-
   test "calculate_output_value should calculate output value from full barrier" do
     first_synapse = %Synapse{value: 1.5}
     second_synapse = %Synapse{value: 2.5}
@@ -58,15 +41,26 @@ defmodule Evolixir.NeuronTest do
 
   test "Upon receiving a synapse, if the updated_barrier is full then the Neuron should send a synapse to its outbound connections" do
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
-    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    fake_from_node_id = 5
     weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {:ok, neuron_inbound_connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
-    artificial_synapse = %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
-    :ok = GenServer.cast(neuron_pid, {:receive_synapse, artificial_synapse})
+    {inbound_connections, neuron_inbound_connection_id} = Node.add_inbound_connection(Map.new(), fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Node.add_outbound_connection([], neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections
+      }, name: neuron_id)
+    artificial_synapse = %Synapse{
+      value: 1.0,
+      from_node_id: fake_from_node_id,
+      connection_id: neuron_inbound_connection_id
+    }
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(50)
@@ -76,23 +70,28 @@ defmodule Evolixir.NeuronTest do
     {received_synapse} = updated_test_state.received_synapses
     assert received_synapse.connection_id == fake_test_helper_connection_id
     assert_in_delta received_synapse.value, 0.7310, 0.001
-    assert received_synapse.from_node_id == neuron_pid
+    assert received_synapse.from_node_id == neuron_id
   end
 
   test "Upon receiving a synapse, if the updated_barrier is not full then the Neuron should not send a synapse to its outbound connections" do
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
-    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    fake_from_node_id = 5
     weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    #Add two expected connections
-    {:ok, neuron_inbound_connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    {:ok, _neuron_inbound_connection_two_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
-
+    {inbound_connections_count_one, neuron_inbound_connection_id} = Node.add_inbound_connection(Map.new(), fake_from_node_id, weight)
+    {inbound_connections, _neuron_inbound_connection_two} = Node.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Node.add_outbound_connection([], neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections
+      }, name: neuron_id)
     artificial_synapse = %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
-    :ok = GenServer.cast(neuron_pid, {:receive_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)
@@ -102,24 +101,28 @@ defmodule Evolixir.NeuronTest do
 
   test "Upon receiving a synapse, if the updated_barrier is full with two expected synapses then the Neuron should send a synapse to its outbound connections" do
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
-    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-
-    fake_from_node_id = 5
     weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {:ok, neuron_inbound_connection_id} =
-      GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    {:ok, neuron_inbound_connection_two_id} =
-      GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
+    {inbound_connections_count_one, neuron_inbound_connection_id} = Node.add_inbound_connection(Map.new(), fake_from_node_id, weight)
+    {inbound_connections, neuron_inbound_connection_two_id} = Node.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Node.add_outbound_connection([], neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections
+      }, name: neuron_id)
 
     artificial_synapse =
       %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
     artificial_synapse_two =
       %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_two_id}
-    :ok = GenServer.cast(neuron_pid, {:receive_synapse, artificial_synapse})
-    :ok = GenServer.cast(neuron_pid, {:receive_synapse, artificial_synapse_two})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse_two})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)
@@ -129,20 +132,27 @@ defmodule Evolixir.NeuronTest do
     {received_synapse} = updated_test_state.received_synapses
     assert received_synapse.connection_id == fake_test_helper_connection_id
     assert_in_delta received_synapse.value, 0.8807, 0.001
-    assert received_synapse.from_node_id == neuron_pid
+    assert received_synapse.from_node_id == neuron_id
   end
 
   test "Upon receiving a blank synapse, Neuron should not activate" do
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
-    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    fake_from_node_id = 5
     weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {:ok, neuron_inbound_connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
+    {inbound_connections, neuron_inbound_connection_id} = Node.add_inbound_connection(Map.new(), fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Node.add_outbound_connection([], neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections
+      }, name: neuron_id)
     artificial_synapse = %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
-    :ok = GenServer.cast(neuron_pid, {:receive_blank_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)
@@ -152,18 +162,25 @@ defmodule Evolixir.NeuronTest do
 
   test "Upon receiving a blank synapse, Neuron should not activate with two inbound connections" do
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
-    {:ok, neuron_pid} = GenServer.start_link(Neuron, %Neuron{activation_function: activation_function_with_id})
-    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    fake_from_node_id = 5
     weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {:ok, neuron_inbound_connection_id} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    {:ok, neuron_inbound_connection_id_two} = GenServer.call(neuron_pid, {:add_inbound_connection, {fake_from_node_id, weight}})
-    :ok = GenServer.call(neuron_pid, {:add_outbound_connection, {neuron_test_helper_pid, fake_test_helper_connection_id}})
+    {inbound_connections_count_one, neuron_inbound_connection_id} = Node.add_inbound_connection(Map.new(), fake_from_node_id, weight)
+    {inbound_connections, neuron_inbound_connection_two_id} = Node.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Node.add_outbound_connection([], neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections
+      }, name: neuron_id)
     artificial_synapse = %Synapse{value: 3.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
-    artificial_synapse_two = %Synapse{value: 5.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id_two}
-    :ok = GenServer.cast(neuron_pid, {:receive_blank_synapse, artificial_synapse})
-    :ok = GenServer.cast(neuron_pid, {:receive_blank_synapse, artificial_synapse_two})
+    artificial_synapse_two = %Synapse{value: 5.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_two_id}
+    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse_two})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)

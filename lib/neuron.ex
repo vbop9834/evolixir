@@ -19,7 +19,8 @@ defmodule Neuron do
   defstruct barrier: Map.new(),
     inbound_connections: Map.new(),
     outbound_connections: [],
-    activation_function: {:sigmoid, &ActivationFunction.sigmoid/1}
+    activation_function: {:sigmoid, &ActivationFunction.sigmoid/1},
+    neuron_id: nil
 
   def apply_weight_to_synapse(synapse, inbound_connection_weight) do
     weighted_value = synapse.value * inbound_connection_weight
@@ -56,19 +57,6 @@ defmodule Neuron do
     |> activation_function.()
   end
 
-  def handle_call({:add_outbound_connection, {to_node_pid, connection_id}}, _from, state) do
-    updated_outbound_connections = Node.add_outbound_connection(state.outbound_connections, to_node_pid, connection_id)
-    updated_state = %Neuron{state | outbound_connections: updated_outbound_connections}
-    {:reply, :ok, updated_state}
-  end
-
-  def handle_call({:add_inbound_connection, {from_node_pid, weight}}, _from, state) do
-    {updated_inbound_connections, new_inbound_connection_id} =
-      Node.add_inbound_connection(state.inbound_connections, from_node_pid, weight)
-    updated_state = %Neuron{state | inbound_connections: updated_inbound_connections}
-    {:reply, {:ok, new_inbound_connection_id} , updated_state}
-  end
-
   def handle_cast({:receive_synapse, synapse}, state) do
     #TODO pattern match error here if nil
     connections_from_node =
@@ -84,7 +72,7 @@ defmodule Neuron do
       if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
         {_activation_function_id, activation_function} = state.activation_function
         output_value = calculate_output_value(updated_barrier, activation_function)
-        send_output_value_to_outbound_connections(self(), output_value, state.outbound_connections)
+        send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections)
         %Neuron{state |
                 barrier: Map.new()
         }

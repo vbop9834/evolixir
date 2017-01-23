@@ -12,34 +12,23 @@ defmodule Evolixir.ActuatorTest do
     assert output_value == 6
   end
 
-  test ":add_inbound_connection should return connection id" do
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{})
-    fake_node_pid = 4
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
-    assert connection_id == 1
-  end
-
-  test ":add_inbound_connection should return new connection id" do
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{})
-    fake_node_pid = 4
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
-    {:ok, connection_id_two} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
-    assert connection_id == 1
-    assert connection_id_two == 2
-  end
-
   test ":receive_synapse should activate Actuator if barrier is full" do
     {:ok, actuator_test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
+    fake_node_pid = 9
 
     actuator_function =
     {0, fn output_value ->
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
     end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
+    {inbound_connections, connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
 
-    fake_node_pid = 9
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
+    {:ok, actuator_pid} = GenServer.start_link(Actuator,
+      %Actuator{
+        actuator_function: actuator_function,
+        inbound_connections: inbound_connections
+      })
 
     artificial_synapse = %Synapse{
       connection_id: connection_id,
@@ -63,11 +52,18 @@ defmodule Evolixir.ActuatorTest do
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
     end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
-
     fake_node_pid = 9
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
-    {:ok, connection_id_two} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
+    {inbound_connections_count_one, connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+    {inbound_connections, connection_id_two} =
+      Node.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
+
+    {:ok, actuator_pid} = GenServer.start_link(Actuator,
+      %Actuator{
+        actuator_function: actuator_function,
+        inbound_connections: inbound_connections
+      })
+
 
     artificial_synapse = %Synapse{
       connection_id: connection_id,
@@ -98,10 +94,16 @@ defmodule Evolixir.ActuatorTest do
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
     end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
+    fake_node_pid = 4
 
-    fake_node_pid = 9
-    {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
+    {inbound_connections, connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+
+    {:ok, actuator_pid} = GenServer.start_link(Actuator,
+      %Actuator{
+        actuator_function: actuator_function,
+        inbound_connections: inbound_connections
+      })
 
     artificial_synapse = %Synapse{
       connection_id: connection_id,
@@ -124,9 +126,19 @@ defmodule Evolixir.ActuatorTest do
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
     end}
 
-    {:ok, actuator_pid} = GenServer.start_link(Actuator, %Actuator{actuator_function: actuator_function})
+    fake_node_pid = 75
 
-    fake_node_pid = 9
+    {inbound_connections_count_one, _connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+    {inbound_connections, _connection_id_two} =
+      Node.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
+
+    {:ok, actuator_pid} = GenServer.start_link(Actuator,
+      %Actuator{
+        actuator_function: actuator_function,
+        inbound_connections: inbound_connections
+      })
+
     {:ok, connection_id} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
     {:ok, connection_id_two} = GenServer.call(actuator_pid, {:add_inbound_connection, fake_node_pid})
 

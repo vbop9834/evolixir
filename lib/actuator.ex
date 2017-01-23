@@ -2,7 +2,8 @@ defmodule Actuator do
   use GenServer
   defstruct inbound_connections: Map.new(),
     barrier: Map.new(),
-    actuator_function: {0, nil}
+    actuator_function: {0, nil},
+    actuator_id: 0
 
   def calculate_output_value(barrier) do
     get_synapse_value =

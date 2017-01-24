@@ -3,7 +3,12 @@ defmodule Actuator do
   defstruct inbound_connections: Map.new(),
     barrier: Map.new(),
     actuator_function: {0, nil},
+    has_been_activated: false,
     actuator_id: 0
+
+  def start_link(actuator) do
+    GenServer.start_link(Actuator, actuator, name: actuator.actuator_id)
+  end
 
   def calculate_output_value(barrier) do
     get_synapse_value =
@@ -20,11 +25,12 @@ defmodule Actuator do
       Map.put(state.barrier, {synapse.from_node_id, synapse.connection_id}, synapse)
     updated_state =
     #check if barrier is full
-    if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
+    if NeuralNode.is_barrier_full?(updated_barrier, state.inbound_connections) do
       {_actuator_function_id, actuator_function} = state.actuator_function
       calculate_output_value(updated_barrier)
       |> actuator_function.()
       %Actuator{state |
+              has_been_activated: true,
               barrier: Map.new()
       }
     else
@@ -43,6 +49,18 @@ defmodule Actuator do
                 barrier: updated_barrier
                }
     {:noreply, updated_state}
+  end
+
+  def handle_call(:has_been_activated, _from, state) do
+    updated_state =
+      case state.has_been_activated do
+        true ->
+          %Actuator{state |
+                    has_been_activated: false
+                   }
+        false -> state
+      end
+    {:reply, state.has_been_activated, updated_state}
   end
 
 end

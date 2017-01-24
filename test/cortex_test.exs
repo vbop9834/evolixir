@@ -53,7 +53,7 @@ defmodule Evolixir.CortexTest do
 
     {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     {inbound_connections, inbound_connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.5)
+      NeuralNode.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.5)
     fake_neuron_layer = fake_recursive_neuron_layer - 1
     fake_neuron = %Neuron {
       neuron_id: test_helper_pid,
@@ -90,9 +90,9 @@ defmodule Evolixir.CortexTest do
     outbound_connections = [{test_helper_pid, fake_connection_id}]
 
     {inbound_connections_count_one, _recursive_inbound_connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.0)
+      NeuralNode.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.0)
     {inbound_connections, inbound_connection_id} =
-      Node.add_inbound_connection(inbound_connections_count_one, fake_neuron_id, 1.5)
+      NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_neuron_id, 1.5)
 
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
     neuron_layer = fake_neuron_layer+1
@@ -132,5 +132,63 @@ defmodule Evolixir.CortexTest do
     assert_in_delta received_synapse.value, 0.9997, 0.001
     assert received_synapse.from_node_id == neuron_id
   end
+
+  test "Cortex should synchronize a basic neural network" do
+    neuron_id = :neuron
+    sensor_id = :sensor
+    actuator_id = :actuator
+    {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
+    {neuron_inbound_connections, inbound_neuron_connection_id} = NeuralNode.add_inbound_connection(Map.new(), sensor_id, 1.59)
+
+    sync_function = {0, fn () -> [1,2,3] end}
+    sensor_outbound_connections = NeuralNode.add_outbound_connection([], neuron_id, inbound_neuron_connection_id)
+    sensor = %Sensor{
+      outbound_connections: sensor_outbound_connections,
+      sync_function: sync_function,
+      sensor_id: sensor_id
+    }
+
+    {actuator_inbound_connections, inbound_actuator_connection_id} = NeuralNode.add_inbound_connection(Map.new(), neuron_id, 0.0)
+    neuron_outbound_connections = NeuralNode.add_outbound_connection([], actuator_id, inbound_actuator_connection_id)
+
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      activation_function: activation_function_with_id,
+      inbound_connections: neuron_inbound_connections,
+      outbound_connections: neuron_outbound_connections
+    }
+
+    actuator_function_with_id = {:test_actuator_function, fn output_value ->
+      :ok = GenServer.call(test_helper_pid, {:activate, output_value})
+    end}
+    actuator = %Actuator{
+      inbound_connections: actuator_inbound_connections,
+      actuator_function: actuator_function_with_id,
+      actuator_id: actuator_id
+    }
+
+    neurons = %{
+      1 => [neuron]
+    }
+    actuators = [
+      actuator
+    ]
+    sensors = [
+      sensor
+    ]
+
+    cortex_name = :cortex
+    {:ok, _} = Cortex.start_link(cortex_name, sensors, neurons, actuators)
+
+    Cortex.synchronize_sensors(sensors)
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+
+    {true, output_value} = updated_test_state.was_activated
+    assert_in_delta output_value, 0.830, 0.001
+
+  end
+
 
 end

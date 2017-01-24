@@ -22,7 +22,7 @@ defmodule Evolixir.ActuatorTest do
     end}
 
     {inbound_connections, connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
       %Actuator{
@@ -54,9 +54,9 @@ defmodule Evolixir.ActuatorTest do
 
     fake_node_pid = 9
     {inbound_connections_count_one, connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
     {inbound_connections, connection_id_two} =
-      Node.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
       %Actuator{
@@ -97,7 +97,7 @@ defmodule Evolixir.ActuatorTest do
     fake_node_pid = 4
 
     {inbound_connections, connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
       %Actuator{
@@ -129,9 +129,9 @@ defmodule Evolixir.ActuatorTest do
     fake_node_pid = 75
 
     {inbound_connections_count_one, connection_id} =
-      Node.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
     {inbound_connections, connection_id_two} =
-      Node.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
+      NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
       %Actuator{

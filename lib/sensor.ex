@@ -4,6 +4,10 @@ defmodule Sensor do
     sync_function: {0, nil},
     sensor_id: 0
 
+  def start_link(sensor) do
+    GenServer.start_link(Sensor, sensor, name: sensor.sensor_id)
+  end
+
   def send_synapse_to_outbound_connection(sensor_id, sensor_data, to_node_pid, connection_id) do
     synapse = %Synapse{
       connection_id: connection_id,
@@ -15,7 +19,11 @@ defmodule Sensor do
   end
 
   def process_sensor_data(_sensor_id, [],[]) do
-    nil
+    :ok
+  end
+
+  def process_sensor_data(_sensor_id, data, []) do
+    :ok
   end
 
   def process_sensor_data(sensor_id, [], [{to_node_pid, connection_id} | remaining_outbound_connections]) do

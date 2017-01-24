@@ -1,4 +1,4 @@
-defmodule Evolixir.NodeTest do
+defmodule Evolixir.NeuralNodeTest do
   use ExUnit.Case
   doctest Node
 
@@ -16,7 +16,7 @@ defmodule Evolixir.NodeTest do
         {from_node_id, connection_id} => %Synapse{}
       }
     barrier_is_full =
-      Node.is_barrier_full?(barrier, inbound_connections)
+      NeuralNode.is_barrier_full?(barrier, inbound_connections)
 
     assert barrier_is_full == true
   end
@@ -38,7 +38,7 @@ defmodule Evolixir.NodeTest do
         1 => %Synapse{}
       }
     barrier_is_full =
-      Node.is_barrier_full?(barrier, inbound_connections)
+      NeuralNode.is_barrier_full?(barrier, inbound_connections)
 
     assert barrier_is_full == false
   end
@@ -47,7 +47,7 @@ defmodule Evolixir.NodeTest do
     empty_inbound_connections = Map.new()
     from_node_pid = 5
     weight = 2.3
-    {inbound_connections_with_new_inbound, new_connection_id} = Node.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
+    {inbound_connections_with_new_inbound, new_connection_id} = NeuralNode.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
 
     connections_from_node_pid = Map.get(inbound_connections_with_new_inbound, from_node_pid)
 
@@ -63,7 +63,7 @@ defmodule Evolixir.NodeTest do
     outbound_connections = []
     to_node_pid = 3
     connection_id = 1
-    updated_outbound_connections = Node.add_outbound_connection(outbound_connections, to_node_pid, connection_id)
+    updated_outbound_connections = NeuralNode.add_outbound_connection(outbound_connections, to_node_pid, connection_id)
 
     assert Enum.count(updated_outbound_connections) == 1
 

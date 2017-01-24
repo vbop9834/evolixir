@@ -7,17 +7,17 @@ defmodule Cortex do
   def get_child_neurons_for_layer({_layer, neuron_structs}) do
     get_child_neuron =
       fn neuron_struct ->
-        worker(Neuron, neuron_struct, restart: :transient, name: neuron_struct.neuron_id)
+        worker(Neuron, [neuron_struct], restart: :transient, id: neuron_struct.neuron_id)
       end
     Enum.map(neuron_structs, get_child_neuron)
   end
 
   def get_sensor_child(sensor_struct) do
-    worker(Sensor, sensor_struct, restart: :transient, name: sensor_struct.sensor_id)
+    worker(Sensor, [sensor_struct], restart: :transient, id: sensor_struct.sensor_id)
   end
 
   def get_actuator_child(actuator_struct) do
-    worker(Actuator, actuator_struct, restart: :transient, name: actuator_struct.actuator_id)
+    worker(Actuator, [actuator_struct], restart: :transient, id: actuator_struct.actuator_id)
   end
 
   def is_connection_recursive?(neurons, from_neuron_layer, to_neuron_id) do
@@ -66,7 +66,35 @@ defmodule Cortex do
     Enum.each(neurons, check_and_send_recursive_synapses_for_layer)
   end
 
-  def start_link(cortex_name, cortex) do
+  def synchronize_sensors(sensors) do
+    synchronize_sensor =
+      fn sensor ->
+        GenServer.call(sensor.sensor_id, :synchronize)
+      end
+    Enum.each(sensors, synchronize_sensor)
+  end
+
+  def wait_on_actuators([]) do
+    :ok
+  end
+
+  def wait_on_actuators([actuator | actuators_remaining]) do
+    actuator_has_been_activated = GenServer.call(actuator.actuator_id, :has_been_activated)
+    case actuator_has_been_activated do
+      true ->
+        wait_on_actuators(actuators_remaining)
+      false ->
+        actuators = [actuator] ++ actuators_remaining
+        wait_on_actuators(actuators)
+    end
+  end
+
+  def start_link(cortex_name, sensors, neurons, actuators) do
+    cortex = %Cortex{
+      sensors: sensors,
+      neurons: neurons,
+      actuators: actuators
+    }
     Supervisor.start_link(__MODULE__, cortex, name: cortex_name)
   end
 
@@ -79,7 +107,6 @@ defmodule Cortex do
       Enum.map(cortex.neurons, &get_child_neurons_for_layer/1)
       |> Enum.concat
     children = child_sensors ++ child_actuators ++ child_neurons
-    supervise(children, strategy: :one_for_one)
+    supervise(children, strategy: :one_for_all)
   end
-
 end

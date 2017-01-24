@@ -22,6 +22,10 @@ defmodule Neuron do
     activation_function: {:sigmoid, &ActivationFunction.sigmoid/1},
     neuron_id: nil
 
+  def start_link(neuron) do
+    GenServer.start_link(Neuron, neuron, name: neuron.neuron_id)
+  end
+
   def apply_weight_to_synapse(synapse, inbound_connection_weight) do
     weighted_value = synapse.value * inbound_connection_weight
     %Synapse{synapse | value: weighted_value}
@@ -69,7 +73,7 @@ defmodule Neuron do
       Map.put(state.barrier, {weighted_synapse.from_node_id, weighted_synapse.connection_id}, weighted_synapse)
     updated_state =
       #check if barrier is full
-      if Node.is_barrier_full?(updated_barrier, state.inbound_connections) do
+      if NeuralNode.is_barrier_full?(updated_barrier, state.inbound_connections) do
         {_activation_function_id, activation_function} = state.activation_function
         output_value = calculate_output_value(updated_barrier, activation_function)
         send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections)

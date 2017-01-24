@@ -31,7 +31,7 @@ defmodule Evolixir.SensorTest do
       {to_node_pid, connection_id_two},
       {to_node_pid, connection_id_three}
     ]
-    fake_sensor_id = 9
+    fake_sensor_id = :sensor
     Sensor.process_sensor_data(fake_sensor_id, sensor_data, outbound_connections)
 
     :timer.sleep(5)

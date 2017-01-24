@@ -63,7 +63,7 @@ defmodule Evolixir.NeuronTest do
     :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
 
     #TODO find a better way to wait for the async op
-    :timer.sleep(50)
+    :timer.sleep(5)
     updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
     assert tuple_size(updated_test_state.received_synapses) == 1
 
@@ -152,7 +152,7 @@ defmodule Evolixir.NeuronTest do
         outbound_connections: outbound_connections
       }, name: neuron_id)
     artificial_synapse = %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
-    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse})
+    :ok = GenServer.call(neuron_id, {:receive_blank_synapse, artificial_synapse})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)
@@ -179,8 +179,8 @@ defmodule Evolixir.NeuronTest do
       }, name: neuron_id)
     artificial_synapse = %Synapse{value: 3.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
     artificial_synapse_two = %Synapse{value: 5.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_two_id}
-    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse})
-    :ok = GenServer.cast(neuron_id, {:receive_blank_synapse, artificial_synapse_two})
+    :ok = GenServer.call(neuron_id, {:receive_blank_synapse, artificial_synapse})
+    :ok = GenServer.call(neuron_id, {:receive_blank_synapse, artificial_synapse_two})
 
     #TODO find a better way to wait for the async op
     :timer.sleep(5)

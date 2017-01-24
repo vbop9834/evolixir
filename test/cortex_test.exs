@@ -1,0 +1,136 @@
+defmodule Evolixir.CortexTest do
+  use ExUnit.Case
+  doctest Cortex
+
+  test "is_connection_recursive? should check if the from_neuron's layer is greater than the to_neuron's layer" do
+    neuron_one = %Neuron{neuron_id: 9}
+    neuron_two = %Neuron{neuron_id: 6}
+    neuron_two_layer = 7
+    neurons =
+      %{
+        1 => [neuron_one],
+        neuron_two_layer => [neuron_two]
+      }
+
+    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+
+    assert is_recursive? == true
+  end
+
+  test "is_connection_recursive? should check if the from_neuron's layer is equal to the to_neuron's layer" do
+    neuron_one = %Neuron{neuron_id: 9}
+    neuron_two = %Neuron{neuron_id: 6}
+    neuron_two_layer = 7
+    neurons =
+      %{
+        neuron_two_layer => [neuron_one, neuron_two],
+      }
+
+    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+
+    assert is_recursive? == true
+  end
+
+  test "is_connection_recursive? should return false if the from_neuron_layer is less than the to_neuron's layer" do
+    neuron_one = %Neuron{neuron_id: 9}
+    neuron_two = %Neuron{neuron_id: 6}
+    neuron_two_layer = 7
+    neurons =
+      %{
+        (neuron_two_layer+4) => [neuron_one],
+        neuron_two_layer => [neuron_two]
+      }
+
+    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+
+    assert is_recursive? == false
+  end
+
+  test "set_recursive_neural_network_state should queue up blank synapses for recursive connections" do
+    fake_recursive_neuron_id = 54
+    fake_recursive_neuron_layer = 5
+    fake_recursive_neuron = %Neuron{neuron_id: fake_recursive_neuron_id}
+
+    {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
+    {inbound_connections, inbound_connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.5)
+    fake_neuron_layer = fake_recursive_neuron_layer - 1
+    fake_neuron = %Neuron {
+      neuron_id: test_helper_pid,
+      inbound_connections: inbound_connections
+    }
+    neurons =
+      %{
+        fake_neuron_layer => [fake_neuron],
+        fake_recursive_neuron_layer => [fake_recursive_neuron]
+      }
+
+    Cortex.set_recursive_neural_network_state(neurons)
+
+    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 1
+
+    {received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == inbound_connection_id
+    assert_in_delta received_synapse.value, 0.0, 0.001
+    assert received_synapse.from_node_id == fake_recursive_neuron_id
+  end
+
+  test "set_recursive_neural_network_state should queue up blank synapses for recursive connections making it possible to activate a neuron" do
+    fake_recursive_neuron_id = 90
+    fake_recursive_neuron_layer = 9
+    fake_recursive_neuron = %Neuron{neuron_id: fake_recursive_neuron_id}
+
+    fake_neuron_id = 76
+    fake_neuron_layer = 1
+    fake_neuron = %Neuron{neuron_id: fake_neuron_id}
+
+    {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
+    fake_connection_id = 99
+    outbound_connections = [{test_helper_pid, fake_connection_id}]
+
+    {inbound_connections_count_one, _recursive_inbound_connection_id} =
+      Node.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.0)
+    {inbound_connections, inbound_connection_id} =
+      Node.add_inbound_connection(inbound_connections_count_one, fake_neuron_id, 1.5)
+
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    neuron_layer = fake_neuron_layer+1
+    neuron_id = :neuron
+    neuron_one = %Neuron{
+      activation_function: activation_function_with_id,
+      neuron_id: neuron_id,
+      inbound_connections: inbound_connections,
+      outbound_connections: outbound_connections
+    }
+    {:ok, _} = GenServer.start_link(Neuron, neuron_one, name: neuron_id)
+
+    neurons =
+      %{
+        fake_neuron_layer => [neuron_one],
+        neuron_layer => [fake_neuron],
+        fake_recursive_neuron_layer => [fake_recursive_neuron]
+      }
+
+    Cortex.set_recursive_neural_network_state(neurons)
+
+    artificial_synapse = %Synapse {
+      value: 5.5,
+      from_node_id: fake_neuron_id,
+      connection_id: inbound_connection_id
+    }
+
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
+
+    #TODO find a better way to wait for the async op
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 1
+
+    {received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == fake_connection_id
+    assert_in_delta received_synapse.value, 0.9997, 0.001
+    assert received_synapse.from_node_id == neuron_id
+  end
+
+end

@@ -14,7 +14,7 @@ defmodule Sensor do
     :ok = GenServer.cast(to_node_pid, {:receive_synapse, synapse})
   end
 
-  def process_sensor_data(sensor_id, [],[]) do
+  def process_sensor_data(_sensor_id, [],[]) do
     nil
   end
 

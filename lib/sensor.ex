@@ -22,7 +22,7 @@ defmodule Sensor do
     :ok
   end
 
-  def process_sensor_data(_sensor_id, data, []) do
+  def process_sensor_data(_sensor_id, _data, []) do
     :ok
   end
 

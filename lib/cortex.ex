@@ -66,12 +66,13 @@ defmodule Cortex do
     Enum.each(neurons, check_and_send_recursive_synapses_for_layer)
   end
 
-  def synchronize_sensors(sensors) do
+  def synchronize_sensors(sensors, actuators) do
     synchronize_sensor =
       fn sensor ->
         GenServer.call(sensor.sensor_id, :synchronize)
       end
     Enum.each(sensors, synchronize_sensor)
+    wait_on_actuators(actuators)
   end
 
   def wait_on_actuators([]) do

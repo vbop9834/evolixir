@@ -181,7 +181,7 @@ defmodule Evolixir.CortexTest do
     cortex_name = :cortex
     {:ok, _} = Cortex.start_link(cortex_name, sensors, neurons, actuators)
 
-    Cortex.synchronize_sensors(sensors)
+    Cortex.synchronize_sensors(sensors, actuators)
     :timer.sleep(5)
     updated_test_state = GenServer.call(test_helper_pid, :get_state)
 

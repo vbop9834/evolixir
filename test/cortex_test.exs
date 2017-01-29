@@ -248,7 +248,6 @@ defmodule Evolixir.CortexTest do
     {:ok, _cortex_pid} = Cortex.start_link(registry_name, cortex_id, sensors, neurons, actuators)
     :ok = Cortex.reset_network(registry_name, cortex_id)
 
-
     Cortex.think(registry_name, cortex_id)
 
     :timer.sleep(5)
@@ -256,8 +255,14 @@ defmodule Evolixir.CortexTest do
 
     {true, output_value} = updated_test_state.was_activated
     assert_in_delta output_value, 0.830, 0.001
-  end
 
+    Cortex.think(registry_name, cortex_id)
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+
+    {true, output_value} = updated_test_state.was_activated
+    assert_in_delta output_value, 0.941, 0.001
+  end
 
 
 end

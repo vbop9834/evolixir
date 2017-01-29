@@ -22,7 +22,7 @@ defmodule CortexController do
     from_neuron_layer >= to_neuron_layer
   end
 
-  def set_recursive_neural_network_state(neurons) do
+  def set_recursive_neural_network_state(registry_func, neurons) do
     send_recursive_synapse_to_inbound_connection =
       fn to_node_id, from_node_id, {connection_id, _weight} ->
         synapse = %Synapse{
@@ -30,7 +30,8 @@ defmodule CortexController do
           from_node_id: from_node_id,
           value: 0.0
         }
-        GenServer.call(to_node_id, {:receive_blank_synapse, synapse})
+        node_name = registry_func.(to_node_id)
+        GenServer.call(node_name, {:receive_blank_synapse, synapse})
       end
     check_connections_from_node =
       fn from_neuron_layer, to_node_id, {from_node_id, connections_from_node} ->
@@ -86,6 +87,10 @@ defmodule CortexController do
     {:reply, :ok, state}
   end
 
+  def handle_call(:reset_network, _from, state) do
+    set_recursive_neural_network_state(state.registry_func, state.neurons)
+    {:reply, :ok, state}
+  end
 end
 
 defmodule Cortex do
@@ -138,6 +143,11 @@ defmodule Cortex do
     :ok = GenServer.call(via_tuple, :think)
   end
 
+  def reset_network(registry_name, cortex_id) do
+    via_tuple = {:via, Registry, {registry_name, {cortex_id, :controller}}}
+    :ok = GenServer.call(via_tuple, :reset_network)
+  end
+
   def start_link(registry_name, cortex_controller_pid, sensors, neurons, actuators) do
     registry_func = fn outbound_pid ->
                       {:via, Registry,
@@ -174,6 +184,7 @@ defmodule Cortex do
       |> Enum.concat
     children = [controller_child] ++ sensor_children ++ neuron_children ++ actuator_children
 
+    #TODO need to send recursive blank synapses too on restart
     supervise(children, strategy: :one_for_all)
   end
 end

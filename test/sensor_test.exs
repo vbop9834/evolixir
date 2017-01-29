@@ -8,7 +8,7 @@ defmodule Evolixir.SensorTest do
     connection_id = 5
     fake_sensor_id = 8
 
-    Sensor.send_synapse_to_outbound_connection(fake_sensor_id, data, to_node_pid, connection_id)
+    Sensor.send_synapse_to_outbound_connection(nil, fake_sensor_id, data, to_node_pid, connection_id)
 
     :timer.sleep(5)
     updated_test_state = GenServer.call(to_node_pid, :get_state)
@@ -32,7 +32,7 @@ defmodule Evolixir.SensorTest do
       {to_node_pid, connection_id_three}
     ]
     fake_sensor_id = :sensor
-    Sensor.process_sensor_data(fake_sensor_id, sensor_data, outbound_connections)
+    Sensor.process_sensor_data(nil, fake_sensor_id, sensor_data, outbound_connections)
 
     :timer.sleep(5)
     updated_test_state = GenServer.call(to_node_pid, :get_state)
@@ -66,7 +66,7 @@ defmodule Evolixir.SensorTest do
       {to_node_pid, connection_id_three}
     ]
     fake_sensor_id = 9
-    Sensor.process_sensor_data(fake_sensor_id, sensor_data, outbound_connections)
+    Sensor.process_sensor_data(nil, fake_sensor_id, sensor_data, outbound_connections)
 
     :timer.sleep(5)
     updated_test_state = GenServer.call(to_node_pid, :get_state)
@@ -101,7 +101,7 @@ defmodule Evolixir.SensorTest do
       {to_node_pid, connection_id_three}
     ]
     fake_sensor_id = 9
-    Sensor.synchronize(fake_sensor_id, sync_function, outbound_connections)
+    Sensor.synchronize(nil, fake_sensor_id, sync_function, outbound_connections)
 
     :timer.sleep(5)
     updated_test_state = GenServer.call(to_node_pid, :get_state)
@@ -136,7 +136,7 @@ defmodule Evolixir.SensorTest do
       {to_node_pid, connection_id_three}
     ]
     fake_sensor_id = 9
-    Sensor.synchronize(fake_sensor_id, sync_function, outbound_connections)
+    Sensor.synchronize(nil, fake_sensor_id, sync_function, outbound_connections)
 
     :timer.sleep(5)
     updated_test_state = GenServer.call(to_node_pid, :get_state)

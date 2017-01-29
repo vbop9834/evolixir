@@ -12,7 +12,7 @@ defmodule Evolixir.CortexTest do
         neuron_two_layer => [neuron_two]
       }
 
-    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+    is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
 
     assert is_recursive? == true
   end
@@ -26,7 +26,7 @@ defmodule Evolixir.CortexTest do
         neuron_two_layer => [neuron_one, neuron_two],
       }
 
-    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+    is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
 
     assert is_recursive? == true
   end
@@ -41,7 +41,7 @@ defmodule Evolixir.CortexTest do
         neuron_two_layer => [neuron_two]
       }
 
-    is_recursive? = Cortex.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
+    is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
 
     assert is_recursive? == false
   end
@@ -65,7 +65,7 @@ defmodule Evolixir.CortexTest do
         fake_recursive_neuron_layer => [fake_recursive_neuron]
       }
 
-    Cortex.set_recursive_neural_network_state(neurons)
+    CortexController.set_recursive_neural_network_state(neurons)
 
     updated_test_state = GenServer.call(test_helper_pid, :get_state)
     assert tuple_size(updated_test_state.received_synapses) == 1
@@ -112,7 +112,7 @@ defmodule Evolixir.CortexTest do
         fake_recursive_neuron_layer => [fake_recursive_neuron]
       }
 
-    Cortex.set_recursive_neural_network_state(neurons)
+    CortexController.set_recursive_neural_network_state(neurons)
 
     artificial_synapse = %Synapse {
       value: 5.5,
@@ -134,9 +134,9 @@ defmodule Evolixir.CortexTest do
   end
 
   test "Cortex should synchronize a basic neural network" do
-    neuron_id = :neuron
-    sensor_id = :sensor
-    actuator_id = :actuator
+    neuron_id = 1
+    sensor_id = 2
+    actuator_id = 3
     {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     {neuron_inbound_connections, inbound_neuron_connection_id} = NeuralNode.add_inbound_connection(Map.new(), sensor_id, 1.59)
 
@@ -178,10 +178,13 @@ defmodule Evolixir.CortexTest do
       sensor
     ]
 
-    cortex_name = :cortex
-    {:ok, _} = Cortex.start_link(cortex_name, sensors, neurons, actuators)
+    registry_name = Cortex_Registry
+    {:ok, _registry_pid} = Registry.start_link(:unique, registry_name)
+    cortex_id = :cortex
+    {:ok, _cortex_pid} = Cortex.start_link(registry_name, cortex_id, sensors, neurons, actuators)
 
-    Cortex.synchronize_sensors(sensors, actuators)
+    Cortex.think(registry_name, cortex_id)
+
     :timer.sleep(5)
     updated_test_state = GenServer.call(test_helper_pid, :get_state)
 

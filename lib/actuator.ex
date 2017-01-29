@@ -6,8 +6,13 @@ defmodule Actuator do
     has_been_activated: false,
     actuator_id: 0
 
+  def start_link(registry_func, actuator) do
+    actuator_name = registry_func.(actuator.actuator_id)
+    GenServer.start_link(Actuator, actuator, name: actuator_name)
+  end
+
   def start_link(actuator) do
-    GenServer.start_link(Actuator, actuator, name: actuator.actuator_id)
+    GenServer.start_link(Actuator, actuator)
   end
 
   def calculate_output_value(barrier) do

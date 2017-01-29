@@ -16,14 +16,21 @@ end
 
 defmodule Neuron do
   use GenServer
-  defstruct barrier: Map.new(),
+  defstruct registry_func: nil,
+    barrier: Map.new(),
     inbound_connections: Map.new(),
     outbound_connections: [],
     activation_function: {:sigmoid, &ActivationFunction.sigmoid/1},
     neuron_id: nil
 
   def start_link(neuron) do
-    GenServer.start_link(Neuron, neuron, name: neuron.neuron_id)
+    case neuron.registry_func do
+      nil ->
+        GenServer.start_link(Neuron, neuron)
+      reg_func ->
+        neuron_name = reg_func.(neuron.neuron_id)
+        GenServer.start_link(Neuron, neuron, name: neuron_name)
+    end
   end
 
   def apply_weight_to_synapse(synapse, inbound_connection_weight) do
@@ -31,11 +38,17 @@ defmodule Neuron do
     %Synapse{synapse | value: weighted_value}
   end
 
-  def send_synapse_to_outbound_connection(synapse, outbound_pid) do
-    :ok = GenServer.cast(outbound_pid, {:receive_synapse, synapse})
+  def send_synapse_to_outbound_connection(synapse, outbound_pid, maybe_registry_func) do
+    case maybe_registry_func do
+      nil ->
+        :ok = GenServer.cast(outbound_pid, {:receive_synapse, synapse})
+      reg_func ->
+        outbound_pid_with_via = reg_func.(outbound_pid)
+        :ok = GenServer.cast(outbound_pid_with_via, {:receive_synapse, synapse})
+    end
   end
 
-  def send_output_value_to_outbound_connections(from_node_pid, output_value, outbound_connections) do
+  def send_output_value_to_outbound_connections(from_node_pid, output_value, outbound_connections, registry_func) do
     process_connection =
     (fn {to_node_pid, connection_id} ->
       synapse_to_send =
@@ -44,7 +57,7 @@ defmodule Neuron do
           from_node_id: from_node_pid,
           value: output_value
         }
-      send_synapse_to_outbound_connection(synapse_to_send, to_node_pid)
+      send_synapse_to_outbound_connection(synapse_to_send, to_node_pid, registry_func)
     end)
     Enum.each(outbound_connections, process_connection)
   end
@@ -76,7 +89,7 @@ defmodule Neuron do
       if NeuralNode.is_barrier_full?(updated_barrier, state.inbound_connections) do
         {_activation_function_id, activation_function} = state.activation_function
         output_value = calculate_output_value(updated_barrier, activation_function)
-        send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections)
+        send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections, state.registry_func)
         %Neuron{state |
                 barrier: Map.new()
         }

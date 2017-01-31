@@ -10,13 +10,14 @@ defmodule ActivationFunction do
   end
 
   def sigmoid(x) do
-    1.0 / (1.0 + :math.exp(-x))
+    1.0 / (1.0 + :math.exp( -x ))
   end
 end
 
 defmodule Neuron do
   use GenServer
   defstruct registry_func: nil,
+    bias: 0.0,
     barrier: Map.new(),
     inbound_connections: Map.new(),
     outbound_connections: [],
@@ -62,15 +63,20 @@ defmodule Neuron do
     Enum.each(outbound_connections, process_connection)
   end
 
-  def calculate_output_value(full_barrier, activation_function) do
-    #TODO add activation function
+  def calculate_output_value(full_barrier, activation_function, bias) do
     get_synapse_value =
     (fn {_, synapse} ->
       synapse.value
     end)
 
+    add_bias =
+    fn synapse_sum ->
+      synapse_sum + bias
+    end
+
     Enum.map(full_barrier, get_synapse_value)
     |> Enum.sum
+    |> add_bias.()
     |> activation_function.()
   end
 
@@ -88,7 +94,7 @@ defmodule Neuron do
       #check if barrier is full
       if NeuralNode.is_barrier_full?(updated_barrier, state.inbound_connections) do
         {_activation_function_id, activation_function} = state.activation_function
-        output_value = calculate_output_value(updated_barrier, activation_function)
+        output_value = calculate_output_value(updated_barrier, activation_function, state.bias)
         send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections, state.registry_func)
         %Neuron{state |
                 barrier: Map.new()

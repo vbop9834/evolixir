@@ -21,7 +21,36 @@ defmodule Evolixir.NeuralNodeTest do
     assert barrier_is_full == true
   end
 
-  test "is_barrier_full? Should return true if barrier is not full" do
+  test "is_barrier_full? Should return true if barrier is full with two nodes" do
+    connection_id_node_one = 9
+    connection_id_node_two = 4
+    weight = 2.0
+    connections_from_node_one = %{
+      connection_id_node_one => weight
+    }
+    connections_from_node_two = %{
+      connection_id_node_two => weight
+    }
+    from_node_id = 1
+    from_node_two_id = 5
+    inbound_connections =
+      %{
+        from_node_id => connections_from_node_one,
+        from_node_two_id => connections_from_node_two
+      }
+
+    barrier =
+      %{
+        {from_node_id, connection_id_node_one} => %Synapse{},
+        {from_node_two_id, connection_id_node_two} => %Synapse{}
+      }
+    barrier_is_full =
+      NeuralNode.is_barrier_full?(barrier, inbound_connections)
+
+    assert barrier_is_full == true
+  end
+
+  test "is_barrier_full? Should return false if barrier is not full" do
     fake_inbound_connection_id = 1
     fake_inbound_connection_id_two = 2
     connections_from_node_one =
@@ -32,6 +61,31 @@ defmodule Evolixir.NeuralNodeTest do
     inbound_connections =
       %{
         1 => connections_from_node_one
+      }
+    barrier =
+      %{
+        1 => %Synapse{}
+      }
+    barrier_is_full =
+      NeuralNode.is_barrier_full?(barrier, inbound_connections)
+
+    assert barrier_is_full == false
+  end
+
+  test "is_barrier_full? Should return false if barrier is not full with two nodes" do
+    fake_inbound_connection_id = 1
+    fake_inbound_connection_id_two = 2
+    connections_from_node_one =
+      %{
+        fake_inbound_connection_id => 0.0
+      }
+    connections_from_node_two = %{
+      fake_inbound_connection_id_two => 1.0
+    }
+    inbound_connections =
+      %{
+        1 => connections_from_node_one,
+        2 => connections_from_node_two
       }
     barrier =
       %{

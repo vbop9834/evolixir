@@ -9,17 +9,25 @@ defmodule CortexController do
     GenServer.start_link(CortexController, cortex_controller, name: name)
   end
 
-  def is_connection_recursive?(neurons, from_neuron_layer, to_neuron_id) do
+  def is_connection_recursive?(neurons, to_neuron_layer, from_neuron_id) do
     find_neuron_layer =
     fn {layer, neuron_structs} ->
-      case Enum.any?(neuron_structs, fn neuron_struct -> neuron_struct.neuron_id == to_neuron_id end) do
+      case Enum.any?(neuron_structs,
+            fn neuron_struct ->
+              neuron_struct.neuron_id == from_neuron_id
+            end) do
         true -> layer
         false -> nil
       end
     end
-    to_neuron_layer =
+    from_neuron_layer =
       Enum.find_value(neurons, nil, find_neuron_layer)
-    from_neuron_layer >= to_neuron_layer
+    case from_neuron_layer do
+      nil ->
+        false
+      from_neuron_layer ->
+        from_neuron_layer >= to_neuron_layer
+    end
   end
 
   def set_recursive_neural_network_state(registry_func, neurons) do
@@ -34,8 +42,8 @@ defmodule CortexController do
         GenServer.call(node_name, {:receive_blank_synapse, synapse})
       end
     check_connections_from_node =
-      fn from_neuron_layer, to_node_id, {from_node_id, connections_from_node} ->
-        case is_connection_recursive?(neurons, from_neuron_layer, to_node_id) do
+      fn to_neuron_layer, to_node_id, {from_node_id, connections_from_node} ->
+        case is_connection_recursive?(neurons, to_neuron_layer, from_node_id) do
           true ->
             Enum.each(connections_from_node,
               &send_recursive_synapse_to_inbound_connection.(to_node_id, from_node_id, &1)
@@ -44,10 +52,10 @@ defmodule CortexController do
         end
       end
     check_inbound_connections =
-      fn from_neuron_layer, neuron_struct ->
+      fn to_neuron_layer, neuron_struct ->
         to_node_id = neuron_struct.neuron_id
         inbound_connections = neuron_struct.inbound_connections
-        Enum.each(inbound_connections, &check_connections_from_node.(from_neuron_layer, to_node_id, &1))
+        Enum.each(inbound_connections, &check_connections_from_node.(to_neuron_layer, to_node_id, &1))
       end
     check_and_send_recursive_synapses_for_layer =
       fn {from_neuron_layer, neuron_structs} ->

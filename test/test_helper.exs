@@ -27,4 +27,18 @@ defmodule NodeTestHelper do
   end
 end
 
+defmodule DataGenerator do
+  use GenServer
+
+  def pop_data([data | rest_of_the_data]) do
+    next_data = rest_of_the_data ++ data
+    {data, next_data}
+  end
+
+  def handle_call(:pop, _from, state) do
+    {return_data, updated_data} = pop_data(state)
+    {:reply, return_data, updated_data}
+  end
+end
+
 ExUnit.start()

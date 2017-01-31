@@ -2,6 +2,11 @@ defmodule Evolixir.NeuronTest do
   use ExUnit.Case
   doctest Neuron
 
+  test "sigmoid should work" do
+    result = ActivationFunction.sigmoid(1.0)
+    assert_in_delta result, 0.731, 0.001
+  end
+
   test "apply_weight_to_syntax should multiply the weight by the synapse value and return an updated weighted synapse" do
     synapse = %Synapse{value: 1.0}
     inbound_connection_weight = 5.0
@@ -18,7 +23,7 @@ defmodule Evolixir.NeuronTest do
         2 => second_synapse
       }
     activation_function = fn x -> x end
-    output_value = Neuron.calculate_output_value(barrier, activation_function)
+    output_value = Neuron.calculate_output_value(barrier, activation_function, 0.0)
 
     expected_value = first_synapse.value + second_synapse.value
     assert output_value == expected_value
@@ -33,7 +38,7 @@ defmodule Evolixir.NeuronTest do
         2 => second_synapse
       }
     activation_function = &ActivationFunction.sigmoid/1
-    output_value = Neuron.calculate_output_value(barrier, activation_function)
+    output_value = Neuron.calculate_output_value(barrier, activation_function, 0.0)
 
     expected_value = (first_synapse.value + second_synapse.value) |> activation_function.()
     assert output_value == expected_value

@@ -12,10 +12,7 @@ defmodule CortexController do
   def is_connection_recursive?(neurons, to_neuron_layer, from_neuron_id) do
     find_neuron_layer =
     fn {layer, neuron_structs} ->
-      case Enum.any?(neuron_structs,
-            fn neuron_struct ->
-              neuron_struct.neuron_id == from_neuron_id
-            end) do
+      case Map.has_key?(neuron_structs, from_neuron_id) do
         true -> layer
         false -> nil
       end
@@ -52,14 +49,13 @@ defmodule CortexController do
         end
       end
     check_inbound_connections =
-      fn to_neuron_layer, neuron_struct ->
-        to_node_id = neuron_struct.neuron_id
+      fn to_neuron_layer, {to_node_id, neuron_struct} ->
         inbound_connections = neuron_struct.inbound_connections
         Enum.each(inbound_connections, &check_connections_from_node.(to_neuron_layer, to_node_id, &1))
       end
     check_and_send_recursive_synapses_for_layer =
-      fn {from_neuron_layer, neuron_structs} ->
-        Enum.each(neuron_structs, &check_inbound_connections.(from_neuron_layer,&1))
+      fn {to_neuron_layer, neuron_structs} ->
+        Enum.each(neuron_structs, &check_inbound_connections.(to_neuron_layer,&1))
       end
     Enum.each(neurons, check_and_send_recursive_synapses_for_layer)
   end
@@ -110,20 +106,32 @@ defmodule Cortex do
     neurons: Map.new(),
     actuators: []
 
-  defp get_neurons_with_registry(registry_func, {layer, neuron_structs}) do
-    get_neuron_struct =
-      fn neuron_struct ->
-        %Neuron{neuron_struct |
-                registry_func: registry_func
-        }
-    end
+  defp get_neuron_struct(registry_func, neuron_struct) do
+    %Neuron{neuron_struct |
+                        registry_func: registry_func
+    }
+  end
 
-    {layer, Enum.map(neuron_structs, get_neuron_struct)}
+  defp update_neurons_with_registry(_registry_func, [], neurons) do
+    neurons
+  end
+
+  defp update_neurons_with_registry(registry_func, [neuron_to_update | neurons_remaining], neurons_to_return) do
+    updated_struct = get_neuron_struct(registry_func, neuron_to_update)
+    updated_neurons = Map.put(neurons_to_return, updated_struct.neuron_id, updated_struct)
+    update_neurons_with_registry(registry_func, neurons_remaining, updated_neurons)
+  end
+
+  defp get_neurons_with_registry(registry_func, {layer, neuron_structs}) do
+    neuron_structs_no_keys = Map.values(neuron_structs)
+    updated_neurons = update_neurons_with_registry(registry_func, neuron_structs_no_keys, Map.new())
+
+    {layer, updated_neurons}
   end
 
   defp get_child_neurons_for_layer({_layer, neuron_structs}) do
     get_child_neuron =
-      fn neuron_struct ->
+      fn {_neuron_id, neuron_struct} ->
         neuron_name = neuron_struct.registry_func.(neuron_struct.neuron_id)
         worker(Neuron, [neuron_struct], restart: :transient, id: neuron_name)
       end

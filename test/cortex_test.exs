@@ -9,8 +9,12 @@ defmodule Evolixir.CortexTest do
     neuron_two_layer = 7
     neurons =
       %{
-        neuron_one_layer => [neuron_one],
-        neuron_two_layer => [neuron_two]
+        neuron_one_layer => %{
+          neuron_one.neuron_id => neuron_one 
+        },
+        neuron_two_layer => %{
+          neuron_two.neuron_id => neuron_two
+        }
       }
 
     is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_one_layer, neuron_two.neuron_id)
@@ -24,7 +28,9 @@ defmodule Evolixir.CortexTest do
     neuron_two_layer = 7
     neurons =
       %{
-        neuron_two_layer => [neuron_two]
+        neuron_two_layer => %{
+          neuron_two.neuron_id => neuron_two
+        }
       }
 
     is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
@@ -38,7 +44,10 @@ defmodule Evolixir.CortexTest do
     neuron_two_layer = 7
     neurons =
       %{
-        neuron_two_layer => [neuron_one, neuron_two],
+        neuron_two_layer => %{
+          neuron_one.neuron_id => neuron_one,
+          neuron_two.neuron_id => neuron_two
+        },
       }
 
     is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_two_layer, neuron_one.neuron_id)
@@ -53,8 +62,12 @@ defmodule Evolixir.CortexTest do
     neuron_one_layer = neuron_two_layer+4
     neurons =
       %{
-        neuron_one_layer => [neuron_one],
-        neuron_two_layer => [neuron_two]
+        neuron_one_layer => %{
+          neuron_one.neuron_id => neuron_one
+        },
+        neuron_two_layer => %{
+          neuron_two.neuron_id => neuron_two
+        }
       }
 
     is_recursive? = CortexController.is_connection_recursive?(neurons, neuron_one_layer, neuron_two.neuron_id)
@@ -77,8 +90,12 @@ defmodule Evolixir.CortexTest do
     }
     neurons =
       %{
-        fake_neuron_layer => [fake_neuron],
-        fake_recursive_neuron_layer => [fake_recursive_neuron]
+        fake_neuron_layer => %{
+          fake_neuron.neuron_id => fake_neuron
+        },
+        fake_recursive_neuron_layer => %{
+          fake_recursive_neuron.neuron_id => fake_recursive_neuron
+        }
       }
 
     registry_func = fn x -> x end
@@ -109,8 +126,12 @@ defmodule Evolixir.CortexTest do
     }
     neurons =
       %{
-        fake_neuron_layer => [fake_neuron],
-        fake_recursive_neuron_layer => [fake_recursive_neuron]
+        fake_neuron_layer => %{
+          fake_neuron.neuron_id => fake_neuron
+        },
+        fake_recursive_neuron_layer => %{
+          fake_recursive_neuron.neuron_id => fake_recursive_neuron
+        }
       }
 
     registry_func = fn x -> x end
@@ -152,9 +173,15 @@ defmodule Evolixir.CortexTest do
 
     neurons =
       %{
-        fake_neuron_layer => [neuron_one],
-        neuron_layer => [fake_neuron],
-        fake_recursive_neuron_layer => [fake_recursive_neuron]
+        fake_neuron_layer => %{
+          neuron_one.neuron_id => neuron_one
+        },
+        neuron_layer => %{
+          fake_neuron.neuron_id => fake_neuron
+        },
+        fake_recursive_neuron_layer => %{
+          fake_recursive_neuron.neuron_id => fake_recursive_neuron
+        }
       }
 
     registry_func = fn x -> x end
@@ -216,7 +243,9 @@ defmodule Evolixir.CortexTest do
     }
 
     neurons = %{
-      1 => [neuron]
+      1 => %{
+        neuron.neuron_id => neuron
+      }
     }
     actuators = [
       actuator
@@ -277,7 +306,9 @@ defmodule Evolixir.CortexTest do
     }
 
     neurons = %{
-      1 => [neuron]
+      1 => %{
+        neuron.neuron_id => neuron
+      }
     }
     actuators = [
       actuator
@@ -432,8 +463,13 @@ defmodule Evolixir.CortexTest do
     }
 
     neurons = %{
-      1 => [neuron_a2_1, neuron_a2_2],
-      2 => [neuron_a3_1]
+      1 => %{
+        neuron_a2_1.neuron_id => neuron_a2_1,
+        neuron_a2_2.neuron_id => neuron_a2_2
+      },
+      2 => %{
+        neuron_a3_1.neuron_id => neuron_a3_1
+      }
     }
     actuators = [
       actuator

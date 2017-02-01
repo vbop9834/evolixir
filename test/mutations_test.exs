@@ -72,7 +72,7 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct.bias <= 1.0
   end
 
-  test ":add_bias should not change the bias of a random neuron if that neuron has a bias" do
+  test ":add_bias should not change the bias of a random neuron if that neuron has a bias and should return a mutation_did_not_occur" do
     neuron_layer = 3
     neuron_id = 8
     neuron = %Neuron{
@@ -86,6 +86,60 @@ defmodule Evolixir.MutationsTest do
     }
 
     mutation = :add_bias
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      mutation: mutation
+    }
+
+    mutation_result = Mutations.mutate(mutation_properties)
+
+    assert mutation_result == :mutation_did_not_occur
+  end
+
+  test ":remove_bias should remove a bias from a random neuron if that neuron has a bias" do
+    neuron_layer = 2
+    neuron_id = 9
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      bias: 2.0
+    }
+    neurons = %{
+      neuron_layer => %{
+    neuron.neuron_id => neuron
+  }
+    }
+
+    mutation = :remove_bias
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+
+    assert mutated_sensors == mutation_properties.sensors
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct.bias == nil
+  end
+
+  test ":remove_bias should return a mutation_did_not_occur if a random neuron already doesn't have a bias" do
+    neuron_layer = 3
+    neuron_id = 7
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      bias: nil
+    }
+    neurons = %{
+      neuron_layer => %{
+    neuron.neuron_id => neuron
+  }
+    }
+
+    mutation = :remove_bias
     mutation_properties = %MutationProperties{
       neurons: neurons,
       mutation: mutation

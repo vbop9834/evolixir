@@ -8,7 +8,7 @@ end
 defmodule Mutations do
 
   defp add_bias(neurons) do
-    update_bias = fn neuron_struct ->
+    add_bias = fn neuron_struct ->
       case neuron_struct.bias do
         nil ->
           new_bias = :random.uniform()
@@ -18,7 +18,7 @@ defmodule Mutations do
     end
     {random_layer, random_structs} = Enum.random(neurons)
     {random_neuron_id, random_neuron} = Enum.random(random_structs)
-    maybe_updated_neuron = update_bias.(random_neuron)
+    maybe_updated_neuron = add_bias.(random_neuron)
     case maybe_updated_neuron do
       :bias_already_exists -> :bias_already_exists
       updated_neuron ->
@@ -27,6 +27,7 @@ defmodule Mutations do
         Map.put(neurons, random_layer, updated_layer_neurons)
     end
   end
+
 
   defp mutate_activation_function(neurons, activation_functions) do
     {random_layer, random_structs} = Enum.random(neurons)
@@ -38,6 +39,25 @@ defmodule Mutations do
     updated_layer_neurons =
       Map.put(random_structs, random_neuron_id, updated_neuron)
     Map.put(neurons, random_layer, updated_layer_neurons)
+  end
+
+  defp remove_bias(neurons) do
+    remove_bias = fn neuron_struct ->
+      case neuron_struct.bias do
+        nil -> :neuron_has_no_bias
+        _x -> %{neuron_struct | bias: nil}
+      end
+    end
+    {random_layer, random_structs} = Enum.random(neurons)
+    {random_neuron_id, random_neuron} = Enum.random(random_structs)
+    maybe_updated_neuron = remove_bias.(random_neuron)
+    case maybe_updated_neuron do
+      :neuron_has_no_bias -> :neuron_has_no_bias
+      updated_neuron ->
+        updated_layer_neurons =
+          Map.put(random_structs, random_neuron_id, updated_neuron)
+        Map.put(neurons, random_layer, updated_layer_neurons)
+    end
   end
 
   def mutate(%MutationProperties{
@@ -61,6 +81,18 @@ defmodule Mutations do
              }) do
     updated_neurons = mutate_activation_function(neurons, activation_functions)
     {sensors, updated_neurons, actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :remove_bias,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    case remove_bias(neurons) do
+      :neuron_has_no_bias -> :mutation_did_not_occur
+      updated_neurons -> {sensors, updated_neurons, actuators}
+    end
   end
 
 end

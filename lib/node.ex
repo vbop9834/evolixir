@@ -1,4 +1,9 @@
 defmodule NeuralNode do
+
+  def add_inbound_connection(from_node_pid, weight) do
+    add_inbound_connection(Map.new(), from_node_pid, weight)
+  end
+
   def add_inbound_connection(inbound_connections, from_node_pid, weight) do
     connections_from_node_pid = Map.get(inbound_connections, from_node_pid, Map.new())
     new_connection_id = Enum.count(connections_from_node_pid) + 1

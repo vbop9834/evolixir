@@ -17,7 +17,7 @@ end
 defmodule Neuron do
   use GenServer
   defstruct registry_func: nil,
-    bias: 0.0,
+    bias: nil,
     barrier: Map.new(),
     inbound_connections: Map.new(),
     outbound_connections: [],
@@ -71,7 +71,11 @@ defmodule Neuron do
 
     add_bias =
     fn synapse_sum ->
-      synapse_sum + bias
+      case bias do
+        nil -> synapse_sum
+        bias ->
+          synapse_sum + bias
+      end
     end
 
     Enum.map(full_barrier, get_synapse_value)

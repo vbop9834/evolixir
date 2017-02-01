@@ -29,6 +29,38 @@ defmodule Evolixir.NeuronTest do
     assert output_value == expected_value
   end
 
+  test "calculate_output_value should add the bias" do
+    first_synapse = %Synapse{value: 1.5}
+    second_synapse = %Synapse{value: 2.5}
+    barrier =
+      %{
+        1 => first_synapse,
+        2 => second_synapse
+      }
+    activation_function = fn x -> x end
+    bias = 5.0
+    output_value = Neuron.calculate_output_value(barrier, activation_function, bias)
+
+    expected_value = first_synapse.value + second_synapse.value + bias
+    assert output_value == expected_value
+  end
+
+  test "calculate_output_value should work with a nil bias" do
+    first_synapse = %Synapse{value: 1.5}
+    second_synapse = %Synapse{value: 2.5}
+    barrier =
+      %{
+        1 => first_synapse,
+        2 => second_synapse
+      }
+    activation_function = fn x -> x end
+    bias = nil
+    output_value = Neuron.calculate_output_value(barrier, activation_function, bias)
+
+    expected_value = first_synapse.value + second_synapse.value
+    assert output_value == expected_value
+  end
+
   test "calculate_output_value should calculate output value from full barrier with an activation function" do
     first_synapse = %Synapse{value: 1.5}
     second_synapse = %Synapse{value: 2.5}

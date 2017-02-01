@@ -191,4 +191,45 @@ defmodule Evolixir.MutationsTest do
     assert mutated_inbound_connection_weight < old_weight
   end
 
+  test ":reset_weights should reset weights from a random node" do
+    fake_from_node_id = :node
+    old_weight = 8.0
+    neuron_layer = 2
+    neuron_id = 9
+    {inbound_connections, inbound_connection_id} =
+      NeuralNode.add_inbound_connection(fake_from_node_id, old_weight)
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      bias: 2.0,
+      inbound_connections: inbound_connections
+    }
+    neurons = %{
+      neuron_layer => %{
+        neuron.neuron_id => neuron
+      }
+    }
+
+    mutation = :reset_weights
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+
+    assert mutated_sensors == mutation_properties.sensors
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+
+    mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, fake_from_node_id)
+    assert Enum.count(mutated_inbound_connections_from_node) == 1
+    mutated_inbound_connection_weight = Map.get(mutated_inbound_connections_from_node, inbound_connection_id)
+    assert mutated_inbound_connection_weight < old_weight
+  end
+
 end

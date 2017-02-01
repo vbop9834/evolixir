@@ -93,6 +93,32 @@ defmodule Mutations do
     Map.put(neurons, random_layer, updated_layer_neurons)
   end
 
+  defp reset_weights([], return_inbound_connections) do
+    return_inbound_connections
+  end
+
+  defp reset_weights([{connection_id, _old_weight} | remaining_connections], new_inbound_connections) do
+    min_weight_possible = -1.0 * (:math.pi / 2.0)
+    max_weight_possible = :math.pi / 2.0
+    new_weight = :random.uniform() * (max_weight_possible - min_weight_possible) + min_weight_possible
+    updated_inbound_connections = Map.put(new_inbound_connections, connection_id, new_weight)
+    reset_weights(remaining_connections, updated_inbound_connections)
+  end
+
+  defp reset_weights(neurons) do
+    {random_layer, random_structs} = Enum.random(neurons)
+    {random_neuron_id, random_neuron} = Enum.random(random_structs)
+    {from_node_id, from_node_connections} = Enum.random(random_neuron.inbound_connections)
+    updated_connections_from_node = reset_weights(Map.to_list(from_node_connections), Map.new())
+    updated_inbound_connections = Map.put(random_neuron.inbound_connections, from_node_id, updated_connections_from_node)
+    updated_neuron = %Neuron{random_neuron |
+                             inbound_connections: updated_inbound_connections
+                            }
+    updated_layer_neurons =
+      Map.put(random_structs, random_neuron_id, updated_neuron)
+    Map.put(neurons, random_layer, updated_layer_neurons)
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -135,6 +161,16 @@ defmodule Mutations do
         actuators: actuators
              }) do
     updated_neurons = mutate_weights(neurons)
+    {sensors, updated_neurons, actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :reset_weights,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    updated_neurons = reset_weights(neurons)
     {sensors, updated_neurons, actuators}
   end
 

@@ -208,4 +208,14 @@ defmodule Mutations do
     {sensors, updated_neurons, actuators}
   end
 
+  def mutate(%MutationProperties{
+        mutation: :add_outbound_connection,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    updated_neurons = add_inbound_connection(neurons)
+    {sensors, updated_neurons, actuators}
+  end
+
 end

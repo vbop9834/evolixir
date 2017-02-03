@@ -276,4 +276,48 @@ defmodule Evolixir.MutationsTest do
    assert mutated_weight <= max_weight_possible
   end
 
+  test ":add_outbound_connection should add a random outbound connection" do
+    neuron_id = 9
+    neuron_layer = 1
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron.neuron_id => neuron
+      }
+    }
+
+    mutation = :add_outbound_connection
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+
+    assert mutated_sensors == mutation_properties.sensors
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+
+   {outbound_neuron_id, mutated_connection_id} =
+     hd mutated_neuron_struct.outbound_connections
+   assert outbound_neuron_id == neuron_id
+
+   mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, neuron_id)
+   assert Enum.count(mutated_inbound_connections_from_node) == 1
+   mutated_weight = Map.get(mutated_inbound_connections_from_node, mutated_connection_id)
+   min_weight_possible = -1.0 * (:math.pi / 2.0)
+   max_weight_possible = :math.pi / 2.0
+   assert mutated_weight > min_weight_possible
+   assert mutated_weight <= max_weight_possible
+  end
+
 end

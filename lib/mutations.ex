@@ -119,6 +119,30 @@ defmodule Mutations do
     Map.put(neurons, random_layer, updated_layer_neurons)
   end
 
+  defp add_inbound_connection(neurons) do
+    {random_target_layer, random_target_structs} = Enum.random(neurons)
+    {random_target_neuron_id, random_target_neuron} = Enum.random(random_target_structs)
+    {random_from_layer, random_from_structs} = Enum.random(neurons)
+    {random_from_neuron_id, _random_from_neuron} = Enum.random(random_from_structs)
+    min_weight_possible = -1.0 * (:math.pi / 2.0)
+    max_weight_possible = :math.pi / 2.0
+    new_connection_weight = :random.uniform() * (max_weight_possible - min_weight_possible) + min_weight_possible
+    {updated_target_inbound_connections, new_connection_id} = NeuralNode.add_inbound_connection(random_target_neuron.inbound_connections, random_from_neuron_id, new_connection_weight)
+    updated_target_neuron = %Neuron{random_target_neuron |
+                                    inbound_connections: updated_target_inbound_connections
+                                   }
+    updated_target_layer = Map.put(random_target_structs, random_target_neuron_id, updated_target_neuron)
+    updated_neurons_with_inbound = Map.put(neurons, random_target_layer, updated_target_layer)
+    from_layer_structs = Map.get(updated_neurons_with_inbound, random_from_layer)
+    random_from_neuron = Map.get(from_layer_structs, random_from_neuron_id)
+    updated_from_outbound_connections = NeuralNode.add_outbound_connection(random_from_neuron.outbound_connections, random_target_neuron_id, new_connection_id)
+    updated_from_neuron = %Neuron{random_from_neuron |
+                                  outbound_connections: updated_from_outbound_connections
+                                 }
+    updated_from_layer = Map.put(random_from_structs, random_from_neuron_id, updated_from_neuron)
+    Map.put(neurons, random_from_layer, updated_from_layer)
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -171,6 +195,16 @@ defmodule Mutations do
         actuators: actuators
              }) do
     updated_neurons = reset_weights(neurons)
+    {sensors, updated_neurons, actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_inbound_connection,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    updated_neurons = add_inbound_connection(neurons)
     {sensors, updated_neurons, actuators}
   end
 

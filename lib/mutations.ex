@@ -7,6 +7,12 @@ defmodule MutationProperties do
 end
 defmodule Mutations do
 
+  defp get_random_weight() do
+    min_weight_possible = -1.0 * (:math.pi / 2.0)
+    max_weight_possible = :math.pi / 2.0
+    :random.uniform() * (max_weight_possible - min_weight_possible) + min_weight_possible
+  end
+
   defp add_bias(neurons) do
     add_bias = fn neuron_struct ->
       case neuron_struct.bias do
@@ -67,9 +73,7 @@ defmodule Mutations do
   defp mutate_weights(probability_of_mutating, [{connection_id, old_weight} | remaining_connections], new_inbound_connections) do
     case :random.uniform() <= probability_of_mutating do
       true ->
-        min_weight_possible = -1.0 * (:math.pi / 2.0)
-        max_weight_possible = :math.pi / 2.0
-        new_weight = :random.uniform() * (max_weight_possible - min_weight_possible) + min_weight_possible
+        new_weight = get_random_weight()
         updated_inbound_connections = Map.put(new_inbound_connections, connection_id, new_weight)
         mutate_weights(probability_of_mutating, remaining_connections, updated_inbound_connections)
       false ->
@@ -141,6 +145,72 @@ defmodule Mutations do
                                  }
     updated_from_layer = Map.put(random_from_structs, random_from_neuron_id, updated_from_neuron)
     Map.put(neurons, random_from_layer, updated_from_layer)
+  end
+
+  defp get_highest_neuron_id_in_structs(highest_neuron_id, []) do
+    highest_neuron_id
+  end
+
+  defp get_highest_neuron_id_in_structs(highest_neuron_id_so_far, [neuron_id | remaining_neurons]) do
+    case neuron_id > highest_neuron_id_so_far do
+      true -> get_highest_neuron_id_in_structs(neuron_id, remaining_neurons)
+      false -> get_highest_neuron_id_in_structs(highest_neuron_id_so_far, remaining_neurons)
+    end
+  end
+
+  defp get_new_neuron_id(highest_neuron_id, []) do
+    highest_neuron_id + 1
+  end
+
+  defp get_new_neuron_id(highest_neuron_id_so_far, [{_layer, neuron_structs} | remaining_layers]) do
+    neuron_structs_list = Map.keys(neuron_structs)
+    highest_neuron_id = get_highest_neuron_id_in_structs(highest_neuron_id_so_far, neuron_structs_list)
+    get_new_neuron_id(highest_neuron_id, remaining_layers)
+  end
+
+  defp add_neuron(neurons, activation_functions) do
+    {new_neuron_layer, _structs} = Enum.random(neurons)
+    new_neuron_id = get_new_neuron_id(0, Map.to_list(neurons))
+
+    {random_B_layer, random_B_structs} = Enum.random(neurons)
+    {random_B_neuron_id, random_B_neuron} = Enum.random(random_B_structs)
+    new_neuron_to_B_weight = get_random_weight()
+    {updated_B_inbound_connections, new_neuron_to_B_connection_id} = NeuralNode.add_inbound_connection(random_B_neuron.inbound_connections, new_neuron_id, new_neuron_to_B_weight)
+    updated_B_neuron = %Neuron{random_B_neuron |
+                               inbound_connections: updated_B_inbound_connections
+                              }
+    updated_B_layer = Map.put(random_B_structs, random_B_neuron_id, updated_B_neuron)
+    neurons_updated_with_B = Map.put(neurons, random_B_layer, updated_B_layer)
+
+    {random_A_layer, random_A_structs} = Enum.random(neurons_updated_with_B)
+    {random_A_neuron_id, random_A_neuron} = Enum.random(random_A_structs)
+
+    neuron_A_to_new_weight = get_random_weight()
+    {new_neuron_inbound_connections, neuron_A_to_new_neuron_connection_id} = NeuralNode.add_inbound_connection(random_A_neuron_id, neuron_A_to_new_weight)
+
+    updated_neuron_A_outbound_connections = NeuralNode.add_outbound_connection(random_A_neuron.outbound_connections, new_neuron_id, neuron_A_to_new_neuron_connection_id)
+    updated_neuron_A = %Neuron{random_A_neuron |
+                               outbound_connections: updated_neuron_A_outbound_connections
+                              }
+    updated_A_layer = Map.put(random_A_structs, random_A_neuron_id, updated_neuron_A)
+    neurons_updated_with_A_and_B = Map.put(neurons_updated_with_B, random_A_layer, updated_A_layer)
+
+    new_neuron_outbound_connections = NeuralNode.add_outbound_connection(random_B_neuron_id, new_neuron_to_B_connection_id)
+
+    activation_function = Enum.random(activation_functions)
+    new_neuron = %Neuron{
+      neuron_id: new_neuron_id,
+      outbound_connections: new_neuron_outbound_connections,
+      inbound_connections: new_neuron_inbound_connections,
+      bias: nil,
+      activation_function: activation_function
+    }
+
+    new_neuron_layer_structs = Map.get(neurons_updated_with_A_and_B, new_neuron_layer)
+
+    updated_new_neuron_layer = Map.put(new_neuron_layer_structs, new_neuron_id, new_neuron)
+    neurons_updated_with_A_B_and_new = Map.put(neurons_updated_with_A_and_B, new_neuron_layer, updated_new_neuron_layer)
+    neurons_updated_with_A_B_and_new
   end
 
   def mutate(%MutationProperties{
@@ -215,6 +285,17 @@ defmodule Mutations do
         actuators: actuators
              }) do
     updated_neurons = add_inbound_connection(neurons)
+    {sensors, updated_neurons, actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_neuron,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators,
+        activation_functions: activation_functions
+             }) do
+    updated_neurons = add_neuron(neurons, activation_functions)
     {sensors, updated_neurons, actuators}
   end
 

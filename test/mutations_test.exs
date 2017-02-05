@@ -320,4 +320,52 @@ defmodule Evolixir.MutationsTest do
    assert mutated_weight <= max_weight_possible
   end
 
+  test ":add_neuron should add a neuron in a known layer, connecting it from and to two random neurons" do
+    neuron_id = 4
+    neuron_layer = 98
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron.neuron_id => neuron
+      }
+    }
+
+    mutation = :add_neuron
+    activation_function_id = :first
+    activation_functions = %{
+      activation_function_id => :activation_function
+    }
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      mutation: mutation,
+      activation_functions: activation_functions
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_sensors == mutation_properties.sensors
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 2
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+
+    new_neuron_id = neuron_id + 1
+    new_neuron_struct = Map.get(mutated_neuron_structs, new_neuron_id)
+    assert new_neuron_struct != nil
+
+    assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    assert Enum.count(new_neuron_struct.outbound_connections) == 1
+    assert new_neuron_struct.bias == nil
+    activation_function = Map.get(activation_functions, activation_function_id)
+    assert new_neuron_struct.activation_function == {activation_function_id, activation_function}
+  end
+
 end

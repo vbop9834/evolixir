@@ -18,6 +18,10 @@ defmodule NeuralNode do
     outbound_connections ++ [{to_node_pid, connection_id}]
   end
 
+  def add_outbound_connection(to_node_pid, connection_id) do
+    add_outbound_connection([], to_node_pid, connection_id)
+  end
+
   def is_barrier_full?(barrier, inbound_connections) do
     connection_is_in_barrier? =
       (fn {from_node_id, connections_from_node} ->

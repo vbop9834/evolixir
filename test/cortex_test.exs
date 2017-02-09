@@ -153,10 +153,11 @@ defmodule Evolixir.CortexTest do
 
     {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
     fake_connection_id = 99
-    outbound_connections = [{test_helper_pid, fake_connection_id}]
+    outbound_connections =
+      Neuron.add_outbound_connection(test_helper_pid, fake_connection_id)
 
     {inbound_connections_count_one, _recursive_inbound_connection_id} =
-      NeuralNode.add_inbound_connection(Map.new(), fake_recursive_neuron_id, 1.0)
+      NeuralNode.add_inbound_connection(fake_recursive_neuron_id, 1.0)
     {inbound_connections, inbound_connection_id} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_neuron_id, 1.5)
 
@@ -214,15 +215,18 @@ defmodule Evolixir.CortexTest do
     {neuron_inbound_connections, inbound_neuron_connection_id} = NeuralNode.add_inbound_connection(Map.new(), sensor_id, 20.0)
 
     sync_function = {0, fn () -> [1.0] end}
-    sensor_outbound_connections = NeuralNode.add_outbound_connection([], neuron_id, inbound_neuron_connection_id)
+    sensor_outbound_connections =
+      Sensor.add_outbound_connection(neuron_id, inbound_neuron_connection_id)
     sensor = %Sensor{
       outbound_connections: sensor_outbound_connections,
       sync_function: sync_function,
       sensor_id: sensor_id
     }
 
-    {actuator_inbound_connections, inbound_actuator_connection_id} = NeuralNode.add_inbound_connection(Map.new(), neuron_id, 0.0)
-    neuron_outbound_connections = NeuralNode.add_outbound_connection([], actuator_id, inbound_actuator_connection_id)
+    {actuator_inbound_connections, inbound_actuator_connection_id} =
+      NeuralNode.add_inbound_connection(neuron_id, 0.0)
+    neuron_outbound_connections =
+      Neuron.add_outbound_connection(actuator_id, inbound_actuator_connection_id)
 
     activation_function_with_id = {:id, &ActivationFunction.id/1}
     neuron = %Neuron{
@@ -247,12 +251,12 @@ defmodule Evolixir.CortexTest do
         neuron.neuron_id => neuron
       }
     }
-    actuators = [
-      actuator
-    ]
-    sensors = [
-      sensor
-    ]
+    actuators = %{
+      actuator_id => actuator
+    }
+    sensors = %{
+      sensor_id => sensor
+    }
 
     registry_name = Cortex_Registry_Basic
     {:ok, _registry_pid} = Registry.start_link(:unique, registry_name)
@@ -277,16 +281,20 @@ defmodule Evolixir.CortexTest do
     {neuron_inbound_connections, inbound_recurrent_neuron_connection_id} = NeuralNode.add_inbound_connection(neuron_inbound_connections_count_one, neuron_id, 1.42)
 
     sync_function = {0, fn () -> [1.0,2.0,3.0] end}
-    sensor_outbound_connections = NeuralNode.add_outbound_connection([], neuron_id, inbound_neuron_connection_id)
+    sensor_outbound_connections =
+      Sensor.add_outbound_connection(neuron_id, inbound_neuron_connection_id)
     sensor = %Sensor{
       outbound_connections: sensor_outbound_connections,
       sync_function: sync_function,
       sensor_id: sensor_id
     }
 
-    {actuator_inbound_connections, inbound_actuator_connection_id} = NeuralNode.add_inbound_connection(Map.new(), neuron_id, 0.0)
-    neuron_outbound_connections_count_one = NeuralNode.add_outbound_connection([], actuator_id, inbound_actuator_connection_id)
-    neuron_outbound_connections = NeuralNode.add_outbound_connection(neuron_outbound_connections_count_one, neuron_id, inbound_recurrent_neuron_connection_id)
+    {actuator_inbound_connections, inbound_actuator_connection_id} =
+      NeuralNode.add_inbound_connection(neuron_id, 0.0)
+    neuron_outbound_connections_count_one =
+      Neuron.add_outbound_connection(actuator_id, inbound_actuator_connection_id)
+    neuron_outbound_connections =
+      Neuron.add_outbound_connection(neuron_outbound_connections_count_one, neuron_id, inbound_recurrent_neuron_connection_id)
 
     activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
     neuron = %Neuron{
@@ -310,12 +318,12 @@ defmodule Evolixir.CortexTest do
         neuron.neuron_id => neuron
       }
     }
-    actuators = [
-      actuator
-    ]
-    sensors = [
-      sensor
-    ]
+    actuators = %{
+      actuator.actuator_id => actuator
+    }
+    sensors = %{
+      sensor.sensor_id => sensor
+    }
 
     registry_name = Cortex_Registry_Basic
     {:ok, _registry_pid} = Registry.start_link(:unique, registry_name)
@@ -352,41 +360,34 @@ defmodule Evolixir.CortexTest do
     weight_one = 20.0
     weight_two = -20.0
     {neuron_a2_1_inbound_connections_count_one, sensor_1_to_a2_1_connection_id} =
-      NeuralNode.add_inbound_connection(Map.new(),
-        sensor_1_id, weight_one)
+      NeuralNode.add_inbound_connection(sensor_1_id, weight_one)
     {neuron_a2_1_inbound_connections, sensor_2_to_a2_1_connection_id} =
       NeuralNode.add_inbound_connection(neuron_a2_1_inbound_connections_count_one,
         sensor_2_id, weight_one)
 
     {neuron_a2_2_inbound_connections_count_one, sensor_1_to_a2_2_connection_id} =
-      NeuralNode.add_inbound_connection(Map.new(),
-        sensor_1_id, weight_two)
+      NeuralNode.add_inbound_connection(sensor_1_id, weight_two)
     {neuron_a2_2_inbound_connections, sensor_2_to_a2_2_connection_id} =
       NeuralNode.add_inbound_connection(neuron_a2_2_inbound_connections_count_one,
         sensor_2_id, weight_two)
 
     neuron_weight = 20.0
     {neuron_a3_1_inbound_connections_count_one, neuron_a2_1_to_a3_1_connection_id} =
-      NeuralNode.add_inbound_connection(Map.new(),
-        neuron_a2_1_id, neuron_weight)
+      NeuralNode.add_inbound_connection(neuron_a2_1_id, neuron_weight)
     {neuron_a3_1_inbound_connections, neuron_a2_2_to_a3_1_connection_id} =
       NeuralNode.add_inbound_connection(neuron_a3_1_inbound_connections_count_one,
         neuron_a2_2_id, neuron_weight)
 
     {actuator_inbound_connections, neuron_a3_1_to_actuator_connection_id} =
-      NeuralNode.add_inbound_connection(Map.new(),
-        neuron_a3_1_id, 0.0)
+      NeuralNode.add_inbound_connection(neuron_a3_1_id, 0.0)
 
     neuron_a2_1_outbound_connections =
-      NeuralNode.add_outbound_connection([],
-        neuron_a3_1_id, neuron_a2_1_to_a3_1_connection_id)
+      Neuron.add_outbound_connection(neuron_a3_1_id, neuron_a2_1_to_a3_1_connection_id)
     neuron_a2_2_outbound_connections =
-      NeuralNode.add_outbound_connection([],
-        neuron_a3_1_id, neuron_a2_2_to_a3_1_connection_id)
+      Neuron.add_outbound_connection(neuron_a3_1_id, neuron_a2_2_to_a3_1_connection_id)
 
     neuron_a3_1_outbound_connections =
-      NeuralNode.add_outbound_connection([],
-        actuator_id, neuron_a3_1_to_actuator_connection_id)
+      Neuron.add_outbound_connection(actuator_id, neuron_a3_1_to_actuator_connection_id)
 
     sensor_1_data = [
       [0.0, 0.0],
@@ -397,11 +398,9 @@ defmodule Evolixir.CortexTest do
     {:ok, sensor_data_gen_pid} = GenServer.start_link(DataGenerator, sensor_1_data)
     sensor_1_sync_function = {0, fn () -> GenServer.call(sensor_data_gen_pid, :pop) end}
     sensor_1_outbound_connections_count_one =
-      NeuralNode.add_outbound_connection([],
-        neuron_a2_1_id, sensor_1_to_a2_1_connection_id)
+      Sensor.add_outbound_connection(neuron_a2_1_id, sensor_1_to_a2_1_connection_id)
     sensor_1_outbound_connections =
-      NeuralNode.add_outbound_connection(
-        sensor_1_outbound_connections_count_one,
+      Sensor.add_outbound_connection(sensor_1_outbound_connections_count_one,
         neuron_a2_2_id,
         sensor_1_to_a2_2_connection_id)
     sensor_1 = %Sensor{
@@ -419,10 +418,9 @@ defmodule Evolixir.CortexTest do
     {:ok, sensor_data_2_gen_pid} = GenServer.start_link(DataGenerator, sensor_2_data)
     sensor_2_sync_function = {1, fn () -> GenServer.call(sensor_data_2_gen_pid, :pop) end}
     sensor_2_outbound_connections_count_one =
-      NeuralNode.add_outbound_connection([],
-        neuron_a2_1_id, sensor_2_to_a2_1_connection_id)
+      Sensor.add_outbound_connection(neuron_a2_1_id, sensor_2_to_a2_1_connection_id)
     sensor_2_outbound_connections =
-      NeuralNode.add_outbound_connection(sensor_2_outbound_connections_count_one,
+      Sensor.add_outbound_connection(sensor_2_outbound_connections_count_one,
         neuron_a2_2_id, sensor_2_to_a2_2_connection_id)
     sensor_2 = %Sensor{
       outbound_connections: sensor_2_outbound_connections,
@@ -471,13 +469,13 @@ defmodule Evolixir.CortexTest do
         neuron_a3_1.neuron_id => neuron_a3_1
       }
     }
-    actuators = [
-      actuator
-    ]
-    sensors = [
-      sensor_1,
-      sensor_2
-    ]
+    actuators = %{
+      actuator.actuator_id => actuator
+    }
+    sensors = %{
+      sensor_1.sensor_id => sensor_1,
+      sensor_2.sensor_id => sensor_2
+    }
 
     registry_name = Cortex_XNOR
     {:ok, _registry_pid} = Registry.start_link(:unique, registry_name)

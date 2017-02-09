@@ -20,7 +20,7 @@ defmodule Neuron do
     bias: nil,
     barrier: Map.new(),
     inbound_connections: Map.new(),
-    outbound_connections: [],
+    outbound_connections: Map.new(),
     activation_function: {:sigmoid, &ActivationFunction.sigmoid/1},
     neuron_id: nil
 
@@ -99,7 +99,8 @@ defmodule Neuron do
       if NeuralNode.is_barrier_full?(updated_barrier, state.inbound_connections) do
         {_activation_function_id, activation_function} = state.activation_function
         output_value = calculate_output_value(updated_barrier, activation_function, state.bias)
-        send_output_value_to_outbound_connections(state.neuron_id, output_value, state.outbound_connections, state.registry_func)
+        outbound_connections = Map.keys(state.outbound_connections)
+        send_output_value_to_outbound_connections(state.neuron_id, output_value, outbound_connections, state.registry_func)
         %Neuron{state |
                 barrier: Map.new()
         }
@@ -120,6 +121,14 @@ defmodule Neuron do
               barrier: updated_barrier
              }
     {:reply, :ok, updated_state}
+  end
+
+  def add_outbound_connection(outbound_connections, to_node_id, connection_id) do
+    Map.put(outbound_connections, {to_node_id, connection_id}, nil)
+  end
+
+  def add_outbound_connection(to_node_pid, connection_id) do
+    add_outbound_connection(Map.new(), to_node_pid, connection_id)
   end
 
 end

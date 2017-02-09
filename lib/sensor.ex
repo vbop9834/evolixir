@@ -60,4 +60,12 @@ defmodule Sensor do
     {:reply, :ok, state}
   end
 
+  def add_outbound_connection(outbound_connections, to_node_id, connection_id) do
+    outbound_connections ++ [{to_node_id, connection_id}]
+  end
+
+  def add_outbound_connection(to_node_pid, connection_id) do
+    add_outbound_connection([], to_node_pid, connection_id)
+  end
+
 end

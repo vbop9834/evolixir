@@ -14,14 +14,6 @@ defmodule NeuralNode do
     {updated_inbound_connections, new_connection_id}
   end
 
-  def add_outbound_connection(outbound_connections, to_node_pid, connection_id) do
-    outbound_connections ++ [{to_node_pid, connection_id}]
-  end
-
-  def add_outbound_connection(to_node_pid, connection_id) do
-    add_outbound_connection([], to_node_pid, connection_id)
-  end
-
   def is_barrier_full?(barrier, inbound_connections) do
     connection_is_in_barrier? =
       (fn {from_node_id, connections_from_node} ->
@@ -32,6 +24,29 @@ defmodule NeuralNode do
         Enum.all?(connections_from_node, find_connection_in_barrier)
       end)
     Enum.all?(inbound_connections, connection_is_in_barrier?)
+  end
+
+  def remove_inbound_connection(inbound_connections, from_node_id, connection_id) do
+    connections_from_node_pid = Map.get(inbound_connections, from_node_id)
+    updated_connections_from_node_pid =
+      Map.delete(connections_from_node_pid, connection_id)
+
+    Map.put(inbound_connections, from_node_id, updated_connections_from_node_pid)
+  end
+
+  def remove_outbound_connection(outbound_connections, from_node_id, connection_id) do
+    Map.delete(outbound_connections, {from_node_id, connection_id})
+  end
+
+  def find_neuron_layer(from_neuron_id, {layer, neuron_structs}) do
+    case Map.has_key?(neuron_structs, from_neuron_id) do
+      true -> layer
+      false -> nil
+    end
+  end
+
+  def find_neuron_layer(neuron_id, neurons) do
+    Enum.find_value(neurons, nil, &find_neuron_layer(neuron_id, &1))
   end
 
 end

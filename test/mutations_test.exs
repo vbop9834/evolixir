@@ -263,8 +263,9 @@ defmodule Evolixir.MutationsTest do
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
 
+   mutated_outbound_connections = Map.keys(mutated_neuron_struct.outbound_connections)
    {outbound_neuron_id, mutated_connection_id} =
-     hd mutated_neuron_struct.outbound_connections
+     hd mutated_outbound_connections
    assert outbound_neuron_id == neuron_id
 
    mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, neuron_id)
@@ -307,8 +308,9 @@ defmodule Evolixir.MutationsTest do
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
 
+    mutated_outbound_connections = Map.keys(mutated_neuron_struct.outbound_connections)
    {outbound_neuron_id, mutated_connection_id} =
-     hd mutated_neuron_struct.outbound_connections
+     hd mutated_outbound_connections
    assert outbound_neuron_id == neuron_id
 
    mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, neuron_id)
@@ -366,6 +368,74 @@ defmodule Evolixir.MutationsTest do
     assert new_neuron_struct.bias == nil
     activation_function = Map.get(activation_functions, activation_function_id)
     assert new_neuron_struct.activation_function == {activation_function_id, activation_function}
+  end
+
+  test ":add_neuron_outsplice should disconnect a neuron A to node B then reconnect the nodes with a new neuron as a bridge" do
+    fake_actuator_id = 2
+    neuron_id = 9
+    neuron_layer = 5
+    {inbound_connections, connection_id} =
+      NeuralNode.add_inbound_connection(neuron_id, 0.0)
+    outbound_connections =
+      Neuron.add_outbound_connection(fake_actuator_id, connection_id)
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      outbound_connections: outbound_connections
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    actuator = %Actuator{
+      actuator_id: fake_actuator_id,
+      inbound_connections: inbound_connections
+    }
+    actuators = %{
+      fake_actuator_id => actuator
+    }
+
+    mutation = :add_neuron_outsplice
+    activation_function_id = :first
+    activation_functions = %{
+      activation_function_id => :activation_function
+    }
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      actuators: actuators,
+      mutation: mutation,
+      activation_functions: activation_functions
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_sensors == mutation_properties.sensors
+    assert Enum.count(mutated_actuators) == 1
+    assert mutated_actuators != mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 2
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+
+    new_neuron_id = neuron_id + 1
+    new_layer_number = neuron_layer + 1
+    new_layer = Map.get(mutated_neurons, new_layer_number)
+    new_neuron_struct = Map.get(new_layer, new_neuron_id)
+    assert new_neuron_struct != nil
+
+    assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    assert Enum.count(new_neuron_struct.outbound_connections) == 1
+    assert Map.has_key?(new_neuron_struct.outbound_connections, {fake_actuator_id, 1}) == true
+    assert new_neuron_struct.bias == nil
+    activation_function = Map.get(activation_functions, activation_function_id)
+    assert new_neuron_struct.activation_function == {activation_function_id, activation_function}
+
   end
 
 end

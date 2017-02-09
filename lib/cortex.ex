@@ -1,24 +1,17 @@
 defmodule CortexController do
   use GenServer
   defstruct registry_func: nil,
-    sensors: [],
+    sensors: Map.new(),
     neurons: Map.new(),
-    actuators: []
+    actuators: Map.new()
 
   def start_link(name, cortex_controller) do
     GenServer.start_link(CortexController, cortex_controller, name: name)
   end
 
   def is_connection_recursive?(neurons, to_neuron_layer, from_neuron_id) do
-    find_neuron_layer =
-    fn {layer, neuron_structs} ->
-      case Map.has_key?(neuron_structs, from_neuron_id) do
-        true -> layer
-        false -> nil
-      end
-    end
     from_neuron_layer =
-      Enum.find_value(neurons, nil, find_neuron_layer)
+      NeuralNode.find_neuron_layer(from_neuron_id, neurons)
     case from_neuron_layer do
       nil ->
         false
@@ -138,7 +131,7 @@ defmodule Cortex do
     Enum.map(neuron_structs, get_child_neuron)
   end
 
-  defp get_sensor_with_registry(registry_func, sensor_struct) do
+  defp get_sensor_with_registry(registry_func, {_sensor_id, sensor_struct}) do
     %Sensor{sensor_struct |
             registry_func: registry_func
     }
@@ -179,7 +172,7 @@ defmodule Cortex do
       cortex_controller_pid: cortex_controller_pid,
       sensors: sensors_with_registry,
       neurons: neurons_with_registry,
-      actuators: actuators
+      actuators: Map.values(actuators)
     }
     Supervisor.start_link(__MODULE__, cortex)
   end

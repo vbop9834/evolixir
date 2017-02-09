@@ -113,17 +113,4 @@ defmodule Evolixir.NeuralNodeTest do
     assert connection_weight == weight
   end
 
-  test "add_outbound_connection should add an outbound connection" do
-    outbound_connections = []
-    to_node_pid = 3
-    connection_id = 1
-    updated_outbound_connections = NeuralNode.add_outbound_connection(outbound_connections, to_node_pid, connection_id)
-
-    assert Enum.count(updated_outbound_connections) == 1
-
-    [{outbound_connection_to_pid, outbound_connection_id}] = updated_outbound_connections
-    assert outbound_connection_to_pid == to_node_pid
-    assert connection_id == outbound_connection_id
-  end
-
 end

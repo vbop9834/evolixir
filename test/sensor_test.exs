@@ -164,11 +164,10 @@ defmodule Evolixir.SensorTest do
     connection_id_one = 8
     connection_id_two = 3
     connection_id_three = 6
-    outbound_connections = [
-      {to_node_pid, connection_id_one},
-      {to_node_pid, connection_id_two},
-      {to_node_pid, connection_id_three}
-    ]
+    outbound_connections =
+      Sensor.add_outbound_connection(to_node_pid, connection_id_one)
+      |> (fn outbound_connections -> Sensor.add_outbound_connection(outbound_connections, to_node_pid, connection_id_two) end).()
+      |> (fn outbound_connections -> Sensor.add_outbound_connection(outbound_connections, to_node_pid, connection_id_three) end).()
 
     sensor_name = :sensor
     {:ok, _sensor_pid} = GenServer.start_link(Sensor,

@@ -9,6 +9,25 @@ defmodule MutationProperties do
 end
 defmodule Mutations do
 
+  def default_mutation_sequence do
+    [
+      :add_bias,
+      :remove_bias,
+      :mutate_activation_function,
+      :mutate_weights,
+      :reset_weights,
+      :add_inbound_connection,
+      :add_outbound_connection,
+      :add_sensor,
+      :add_neuron,
+      :add_neuron_outsplice,
+      :add_neuron_insplice,
+      :add_actuator,
+      :add_sensor_link,
+      :add_actuator_link,
+    ]
+  end
+
   defp get_random_weight() do
     min_weight_possible = -1.0 * (:math.pi / 2.0)
     max_weight_possible = :math.pi / 2.0
@@ -688,6 +707,66 @@ defmodule Mutations do
       {updated_neurons, updated_actuators} ->
         {sensors, updated_neurons, updated_actuators}
     end
+  end
+
+  defp get_mutation_sequence(possible_mutations, number_of_nodes) do
+    select_random_mutation =
+    fn _junk ->
+      Enum.random(possible_mutations)
+    end
+
+    number_of_mutations =
+      :random.uniform() * :math.sqrt(number_of_nodes)
+      |> round
+
+    [0..number_of_mutations]
+    |> (fn mutation_list ->
+      Enum.map(mutation_list, select_random_mutation)
+    end).()
+  end
+
+  defp count_neurons_in_layer({_neuron_layer, neuron_structs}) do
+    Enum.count(neuron_structs)
+  end
+
+  defp process_mutation_sequence(_mutation_properties, [], {sensors, neurons, actuators}) do
+    {sensors, neurons, actuators}
+  end
+
+  defp process_mutation_sequence(mutation_properties, [mutation | remaining_mutations], {sensors, neurons, actuators}) do
+    mutation_properties = %MutationProperties{mutation_properties |
+                                              sensors: sensors,
+                                              neurons: neurons,
+                                              actuators: actuators,
+                                              mutation: mutation
+                                             }
+    case mutate(mutation_properties) do
+      :mutation_did_not_occur ->
+        process_mutation_sequence(mutation_properties, remaining_mutations, {sensors, neurons, actuators})
+      {sensors, neurons, actuators} ->
+        process_mutation_sequence(mutation_properties, remaining_mutations, {sensors, neurons, actuators})
+    end
+  end
+
+  defp process_mutation_sequence(mutation_properties, mutation_sequence) do
+    process_mutation_sequence(mutation_properties, mutation_sequence, {mutation_properties.sensors, mutation_properties.neurons, mutation_properties.actuators})
+  end
+
+  def mutate_neural_network(possible_mutations, mutation_properties) do
+    number_of_neurons =
+      Enum.map(mutation_properties.neurons, &count_neurons_in_layer/1)
+      |> Enum.sum
+
+    number_of_nodes =
+      number_of_neurons + Enum.count(mutation_properties.sensors) + Enum.count(mutation_properties.actuators)
+
+    mutation_sequence =
+      get_mutation_sequence(possible_mutations, number_of_nodes)
+
+    mutated_neural_network =
+      process_mutation_sequence(mutation_properties, mutation_sequence)
+
+    mutated_neural_network
   end
 
 end

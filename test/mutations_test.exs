@@ -815,4 +815,77 @@ defmodule Evolixir.MutationsTest do
     assert mutation_result == :mutation_did_not_occur
   end
 
+  test "mutate_neural_network should mutate a neural network randomly" do
+    sensor_id = 1
+    neuron_id = 2
+    actuator_id = 3
+
+    used_sync_function_id = :used_sync
+    sensor = %Sensor{
+      maximum_vector_size: 5,
+      sensor_id: sensor_id,
+      sync_function: used_sync_function_id
+    }
+
+    used_activation_function_id = :used_activation_func
+    neuron_layer = 1
+    neuron = %Neuron{
+      neuron_id: neuron_id,
+      activation_function: used_activation_function_id
+    }
+
+    used_actuator_function_id = :used_actuator_func
+    actuator = %Actuator{
+      actuator_id: actuator_id,
+      actuator_function: used_actuator_function_id
+    }
+
+    {sensor, neuron} =
+      Sensor.connect_to_neuron(sensor, neuron, 0.0)
+    {neuron, actuator} =
+      Neuron.connect_to_actuator(neuron, actuator)
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    actuators = %{
+      actuator_id => actuator
+    }
+
+    sync_function_id = :sync
+    sync_function = {sync_function_id, nil}
+    sync_functions = [{used_sync_function_id, nil}, sync_function]
+
+    activation_function_id = :activation_func
+    activation_function = {activation_function_id, nil}
+    activation_functions = [activation_function, {used_activation_function_id, nil}]
+
+    actuator_function_id = :actuator_func
+    actuator_function = {actuator_function_id, nil}
+    actuator_functions = [actuator_function, {used_actuator_function_id, nil}]
+
+    mutation_properties = %MutationProperties{
+      sensors: sensors,
+      neurons: neurons,
+      actuators: actuators,
+      activation_functions: activation_functions,
+      actuator_functions: actuator_functions,
+      sync_functions: sync_functions
+    }
+
+    mutations = Mutations.default_mutation_sequence
+    mutated_neural_network = Mutations.mutate_neural_network(mutations, mutation_properties)
+
+
+    neural_network = {sensor, neurons, actuators}
+    assert mutated_neural_network != neural_network
+  end
+
 end

@@ -384,6 +384,29 @@ defmodule Mutations do
     {updated_sensors, updated_neurons}
   end
 
+  defp add_sensor_link(sensors, neurons) do
+    {sensor_id, sensor} = Enum.random(sensors)
+    case Enum.count(sensor.outbound_connections) >= sensor.maximum_vector_size do
+      true ->
+        :mutation_did_not_occur
+      false ->
+        {neuron_layer, neuron_structs} =
+          Enum.random(neurons)
+        {neuron_id, neuron} =
+          Enum.random(neuron_structs)
+        weight = get_random_weight()
+        {updated_sensor, updated_neuron} =
+          Sensor.connect_to_neuron(sensor, neuron, weight)
+        sensors =
+          Map.put(sensors, sensor_id, updated_sensor)
+        updated_neuron_layer =
+          Map.put(neuron_structs, neuron_id, updated_neuron)
+        neurons =
+          Map.put(neurons, neuron_layer, updated_neuron_layer)
+        {sensors, neurons}
+     end
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -490,6 +513,19 @@ defmodule Mutations do
              }) do
     {updated_sensors, updated_neurons} = add_neuron_insplice(neurons, sensors, activation_functions)
     {updated_sensors, updated_neurons, actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_sensor_link,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    case add_sensor_link(sensors, neurons) do
+      :mutation_did_not_occur -> :mutation_did_not_occur
+      {updated_sensors, updated_neurons} ->
+        {updated_sensors, updated_neurons, actuators}
+    end
   end
 
 end

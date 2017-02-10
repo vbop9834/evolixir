@@ -503,4 +503,87 @@ defmodule Evolixir.MutationsTest do
 
   end
 
+  test ":add_sensor_link should connect a random sensor to a random neuron" do
+    sensor_id = 3
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+    sensor = %Sensor{
+      maximum_vector_size: 5,
+      sensor_id: sensor_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    mutation = :add_sensor_link
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_sensors) == 1
+    assert mutated_sensors != mutation_properties.sensors
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_sensor = Map.get(mutated_sensors, sensor_id)
+    assert mutated_sensor != sensor
+    assert Enum.count(mutated_sensor.outbound_connections) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
+
+  end
+
+  test ":add_sensor_link should not connect a sensor to a random neuron if the sensor had more outbound connections than maximum_vector_size" do
+    sensor_id = 3
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+    sensor = %Sensor{
+      maximum_vector_size: 0,
+      sensor_id: sensor_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    mutation = :add_sensor_link
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      mutation: mutation
+    }
+
+    mutation_result = Mutations.mutate(mutation_properties)
+    assert mutation_result == :mutation_did_not_occur
+
+  end
+
 end

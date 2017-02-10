@@ -2,6 +2,7 @@ defmodule Sensor do
   use GenServer
   defstruct outbound_connections: [],
     sync_function: {0, nil},
+    maximum_vector_size: 0,
     sensor_id: 0,
     registry_func: nil
 
@@ -52,12 +53,22 @@ defmodule Sensor do
   def synchronize(registry_func, sensor_id, sync_function, outbound_connections) do
     sensor_data = sync_function.()
     process_sensor_data(registry_func, sensor_id, sensor_data, outbound_connections)
+    Enum.count(sensor_data)
   end
 
   def handle_call(:synchronize, _from, state) do
     {_sync_function_id, sync_function} = state.sync_function
-    synchronize(state.registry_func, state.sensor_id, sync_function, state.outbound_connections)
-    {:reply, :ok, state}
+    updated_maximum_vector_size =
+      synchronize(state.registry_func, state.sensor_id, sync_function, state.outbound_connections)
+    maximum_vector_size =
+      case updated_maximum_vector_size > state.maximum_vector_size do
+        true -> updated_maximum_vector_size
+        false -> state.maximum_vector_size
+      end
+    updated_state = %{state |
+                      maximum_vector_size: maximum_vector_size
+                     }
+    {:reply, :ok, updated_state}
   end
 
   def add_outbound_connection(outbound_connections, to_node_id, connection_id) do

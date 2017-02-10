@@ -438,4 +438,69 @@ defmodule Evolixir.MutationsTest do
 
   end
 
+  test ":add_neuron_insplice should disconnect node B to neuron A then reconnect the nodes with a new neuron as a bridge" do
+    sensor_id = 3
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+    sensor = %Sensor{
+      sensor_id: sensor_id
+    }
+
+    {sensor, neuron} =
+      Sensor.connect_to_neuron(sensor, neuron, 0.0)
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    mutation = :add_neuron_insplice
+    activation_function_id = :first
+    activation_functions = %{
+      activation_function_id => :activation_function
+    }
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      mutation: mutation,
+      activation_functions: activation_functions
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_sensors) == 1
+    assert mutated_sensors != mutation_properties.sensors
+    assert Enum.count(mutated_neurons) == 2
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
+
+    new_neuron_id = neuron_id + 1
+    new_layer_number = neuron_layer/2
+    new_layer = Map.get(mutated_neurons, new_layer_number)
+    new_neuron_struct = Map.get(new_layer, new_neuron_id)
+    assert new_neuron_struct != nil
+
+    assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    assert Enum.count(new_neuron_struct.outbound_connections) == 1
+    assert Map.has_key?(new_neuron_struct.inbound_connections, sensor_id) == true
+    assert new_neuron_struct.bias == nil
+    activation_function = Map.get(activation_functions, activation_function_id)
+    assert new_neuron_struct.activation_function == {activation_function_id, activation_function}
+
+  end
+
 end

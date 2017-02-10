@@ -68,4 +68,29 @@ defmodule Sensor do
     add_outbound_connection([], to_node_pid, connection_id)
   end
 
+  #The reason for keeping sensor outbound connections a list
+  #Is to ensure outbound vector data order
+  #Changing this to a map means that order has to be enforced
+  #through code rather data structure
+  #problem is this operation is O(n)
+  #So if this is to be solved for
+  #Then the Live sensor synchronization order should be solved as well
+  def remove_outbound_connection(outbound_connections, to_node_id, connection_id) do
+    List.delete(outbound_connections, {to_node_id, connection_id})
+  end
+
+  def connect_to_neuron(sensor, neuron, weight) do
+    {updated_inbound_connections, new_connection_id} =
+      NeuralNode.add_inbound_connection(neuron.inbound_connections, sensor.sensor_id, weight)
+    updated_outbound_connections =
+      Sensor.add_outbound_connection(sensor.outbound_connections, neuron.neuron_id, new_connection_id)
+    updated_sensor = %Sensor{sensor |
+                             outbound_connections: updated_outbound_connections
+                            }
+    updated_neuron = %Neuron{neuron |
+                             inbound_connections: updated_inbound_connections
+                            }
+    {updated_sensor, updated_neuron}
+  end
+
 end

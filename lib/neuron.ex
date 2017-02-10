@@ -131,4 +131,22 @@ defmodule Neuron do
     add_outbound_connection(Map.new(), to_node_pid, connection_id)
   end
 
+  def remove_outbound_connection(outbound_connections, from_node_id, connection_id) do
+    Map.delete(outbound_connections, {from_node_id, connection_id})
+  end
+
+  def connect_neurons(from_neuron, to_neuron, weight) do
+    {updated_inbound_connections, new_connection_id} =
+      NeuralNode.add_inbound_connection(to_neuron.inbound_connections, from_neuron.neuron_id, weight)
+    updated_outbound_connections =
+      add_outbound_connection(from_neuron.outbound_connections, to_neuron.neuron_id, new_connection_id)
+    updated_from_neuron = %Neuron{from_neuron |
+                                  outbound_connections: updated_outbound_connections
+                                 }
+    updated_to_neuron = %Neuron{to_neuron |
+                                inbound_connections: updated_inbound_connections
+                               }
+    {updated_from_neuron, updated_to_neuron}
+  end
+
 end

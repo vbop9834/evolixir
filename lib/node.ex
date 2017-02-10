@@ -31,11 +31,12 @@ defmodule NeuralNode do
     updated_connections_from_node_pid =
       Map.delete(connections_from_node_pid, connection_id)
 
-    Map.put(inbound_connections, from_node_id, updated_connections_from_node_pid)
-  end
-
-  def remove_outbound_connection(outbound_connections, from_node_id, connection_id) do
-    Map.delete(outbound_connections, {from_node_id, connection_id})
+    case Enum.count(updated_connections_from_node_pid) == 0 do
+      true ->
+        Map.delete(inbound_connections, from_node_id)
+      false ->
+        Map.put(inbound_connections, from_node_id, updated_connections_from_node_pid)
+    end
   end
 
   def find_neuron_layer(from_neuron_id, {layer, neuron_structs}) do

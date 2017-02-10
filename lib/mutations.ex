@@ -3,6 +3,7 @@ defmodule MutationProperties do
     neurons: Map.new(),
     actuators: Map.new(),
     activation_functions: Map.new(),
+    sync_functions: Map.new(),
     mutation: nil
 end
 defmodule Mutations do
@@ -424,6 +425,59 @@ defmodule Mutations do
     {neurons, actuators}
   end
 
+  def add_sensor(sensors, neurons, sync_functions) do
+    {neuron_layer, neuron_structs} =
+      Enum.random(neurons)
+    {neuron_id, neuron} =
+      Enum.random(neuron_structs)
+
+    case Enum.count(sensors) >= Enum.count(sync_functions) do
+      true ->
+        :mutation_did_not_occur
+      false ->
+        max_sensor_id =
+          Map.keys(sensors)
+          |> Enum.max
+        new_sensor_id = max_sensor_id + 1
+        sync_functions_used =
+          Enum.map(sensors, fn {_sensor_id, sensor} ->
+            case sensor.sync_function do
+              {sync_function_id, _sync_function} -> sync_function_id
+              sync_function_id -> sync_function_id
+            end
+          end)
+        sync_functions_not_used =
+          Enum.map(sync_functions, fn sync_function ->
+            case sync_function do
+              {sync_function_id, _sync_function} -> sync_function_id
+              sync_function_id ->
+                sync_function_id
+            end
+          end)
+          |> (fn sync_function_ids -> sync_function_ids -- sync_functions_used end).()
+        sync_function_id =
+          Enum.random(sync_functions_not_used)
+        new_sensor = %Sensor{
+          sensor_id: new_sensor_id,
+          sync_function: sync_function_id
+        }
+
+        weight = get_random_weight()
+        {new_sensor, neuron} =
+          Sensor.connect_to_neuron(new_sensor, neuron, weight)
+
+        sensors =
+          Map.put(sensors, new_sensor_id, new_sensor)
+
+        updated_neuron_layer =
+          Map.put(neuron_structs, neuron_id, neuron)
+        neurons =
+          Map.put(neurons, neuron_layer, updated_neuron_layer)
+
+        {sensors, neurons}
+    end
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -553,6 +607,17 @@ defmodule Mutations do
              }) do
     {updated_neurons, updated_actuators} = add_actuator_link(neurons, actuators)
     {sensors, updated_neurons, updated_actuators}
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_sensor,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators,
+        sync_functions: sync_functions
+             }) do
+    {updated_sensors, updated_neurons} = add_sensor(sensors, neurons, sync_functions)
+    {updated_sensors, updated_neurons, actuators}
   end
 
 end

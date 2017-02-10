@@ -634,4 +634,59 @@ defmodule Evolixir.MutationsTest do
 
   end
 
+  test ":add_sensor should add a new sensor if a sync function is available" do
+    fake_sensor_id = 4
+    used_sync_function = {:used, nil}
+    sensor = %Sensor{
+      sensor_id: 4,
+      sync_function: used_sync_function
+    }
+    sensors = %{
+      fake_sensor_id => sensor
+    }
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    sync_function_id = :sync_func
+    sync_function = {sync_function_id, nil}
+    sync_functions = [sync_function, used_sync_function]
+    mutation = :add_sensor
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      sync_functions: sync_functions,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_sensors) == 2
+    assert mutated_sensors != mutation_properties.sensors
+    assert Enum.count(mutated_neurons) == 1
+
+    new_sensor_id = fake_sensor_id + 1
+    mutated_sensor = Map.get(mutated_sensors, new_sensor_id)
+    assert Enum.count(mutated_sensor.outbound_connections) == 1
+    assert mutated_sensor.sync_function == sync_function_id
+    assert mutated_sensor.sensor_id == new_sensor_id
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
+
+  end
+
 end

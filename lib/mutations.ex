@@ -407,6 +407,23 @@ defmodule Mutations do
      end
   end
 
+  defp add_actuator_link(neurons, actuators) do
+    {actuator_id, actuator} = Enum.random(actuators)
+    {neuron_layer, neuron_structs} =
+      Enum.random(neurons)
+    {neuron_id, neuron} =
+      Enum.random(neuron_structs)
+    {updated_neuron, updated_actuator} =
+      Neuron.connect_to_actuator(neuron, actuator)
+    actuators =
+      Map.put(actuators, actuator_id, updated_actuator)
+    updated_neuron_layer =
+      Map.put(neuron_structs, neuron_id, updated_neuron)
+    neurons =
+      Map.put(neurons, neuron_layer, updated_neuron_layer)
+    {neurons, actuators}
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -526,6 +543,16 @@ defmodule Mutations do
       {updated_sensors, updated_neurons} ->
         {updated_sensors, updated_neurons, actuators}
     end
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_actuator_link,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators
+             }) do
+    {updated_neurons, updated_actuators} = add_actuator_link(neurons, actuators)
+    {sensors, updated_neurons, updated_actuators}
   end
 
 end

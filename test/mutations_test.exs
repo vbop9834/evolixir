@@ -586,4 +586,52 @@ defmodule Evolixir.MutationsTest do
 
   end
 
+  test ":add_actuator_link should connect a random neuron to a random actuator" do
+    actuator_id = 7
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+    actuator = %Actuator{
+      actuator_id: actuator_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    actuators = %{
+      actuator_id => actuator
+    }
+
+    mutation = :add_actuator_link
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      actuators: actuators,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert Enum.count(mutated_actuators) == 1
+    assert mutated_actuators != mutation_properties.actuators
+    assert mutated_sensors == mutation_properties.sensors
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_actuator = Map.get(mutated_actuators, actuator_id)
+    assert mutated_actuator != actuator
+    assert Enum.count(mutated_actuator.inbound_connections) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+
+  end
+
 end

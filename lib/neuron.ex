@@ -149,4 +149,18 @@ defmodule Neuron do
     {updated_from_neuron, updated_to_neuron}
   end
 
+  def connect_to_actuator(from_neuron, to_actuator) do
+    {updated_inbound_connections, new_connection_id} =
+      NeuralNode.add_inbound_connection(to_actuator.inbound_connections, from_neuron.neuron_id, 0.0)
+    updated_outbound_connections =
+      add_outbound_connection(from_neuron.outbound_connections, to_actuator.actuator_id, new_connection_id)
+    updated_neuron = %Neuron{from_neuron |
+                             outbound_connections: updated_outbound_connections
+                            }
+    updated_actuator = %Actuator{to_actuator |
+                                 inbound_connections: updated_inbound_connections
+                                }
+    {updated_neuron, updated_actuator}
+  end
+
 end

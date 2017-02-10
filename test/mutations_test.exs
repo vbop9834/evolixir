@@ -689,4 +689,130 @@ defmodule Evolixir.MutationsTest do
 
   end
 
+  test ":add_sensor should not add a new sensor if all sync functions are used" do
+    fake_sensor_id = 4
+    used_sync_function = {:used, nil}
+    sensor = %Sensor{
+      sensor_id: 4,
+      sync_function: used_sync_function
+    }
+    sensors = %{
+      fake_sensor_id => sensor
+    }
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    sync_functions = [used_sync_function]
+    mutation = :add_sensor
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      sync_functions: sync_functions,
+      mutation: mutation
+    }
+
+    mutation_result = Mutations.mutate(mutation_properties)
+    assert mutation_result == :mutation_did_not_occur
+
+  end
+
+  test ":add_actuator should add a new actuator if an actuator function is available" do
+    fake_actuator_id = 74
+    used_actuator_function = {:used, nil}
+    actuator = %Actuator{
+      actuator_id: 4,
+      actuator_function: used_actuator_function
+    }
+    actuators = %{
+      fake_actuator_id => actuator
+    }
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    actuator_function_id = :actuator_func
+    actuator_function = {actuator_function_id, nil}
+    actuator_functions = [actuator_function, used_actuator_function]
+    mutation = :add_actuator
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      actuators: actuators,
+      actuator_functions: actuator_functions,
+      mutation: mutation
+    }
+
+    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    assert mutated_actuators != mutation_properties.actuators
+    assert Enum.count(mutated_actuators) == 2
+    assert mutated_sensors == mutation_properties.sensors
+    assert Enum.count(mutated_neurons) == 1
+
+    new_actuator_id = fake_actuator_id + 1
+    mutated_actuator = Map.get(mutated_actuators, new_actuator_id)
+    assert Enum.count(mutated_actuator.inbound_connections) == 1
+    assert mutated_actuator.actuator_function == actuator_function_id
+    assert mutated_actuator.actuator_id == new_actuator_id
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    assert Enum.count(mutated_neuron_structs) == 1
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+    assert mutated_neuron_struct != nil
+
+    assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
+    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+
+  end
+
+  test ":add_actuator should not add a new actuator if all actuator functions are used" do
+    fake_actuator_id = 74
+    used_actuator_function = {:used, nil}
+    actuator = %Actuator{
+      actuator_id: 4,
+      actuator_function: used_actuator_function
+    }
+    actuators = %{
+      fake_actuator_id => actuator
+    }
+    neuron_id = 9
+    neuron_layer = 5
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron_id => neuron
+      }
+    }
+
+    actuator_functions = [used_actuator_function]
+    mutation = :add_actuator
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      actuators: actuators,
+      actuator_functions: actuator_functions,
+      mutation: mutation
+    }
+
+    mutation_result = Mutations.mutate(mutation_properties)
+    assert mutation_result == :mutation_did_not_occur
+  end
+
 end

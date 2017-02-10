@@ -4,6 +4,7 @@ defmodule MutationProperties do
     actuators: Map.new(),
     activation_functions: Map.new(),
     sync_functions: Map.new(),
+    actuator_functions: Map.new(),
     mutation: nil
 end
 defmodule Mutations do
@@ -478,6 +479,58 @@ defmodule Mutations do
     end
   end
 
+  def add_actuator(neurons, actuators, actuator_functions) do
+    {neuron_layer, neuron_structs} =
+      Enum.random(neurons)
+    {neuron_id, neuron} =
+      Enum.random(neuron_structs)
+
+    case Enum.count(actuators) >= Enum.count(actuator_functions) do
+      true ->
+        :mutation_did_not_occur
+      false ->
+        max_actuator_id =
+          Map.keys(actuators)
+          |> Enum.max
+        new_actuator_id = max_actuator_id + 1
+        actuator_functions_used =
+          Enum.map(actuators, fn {_actuator_id, actuator} ->
+            case actuator.actuator_function do
+              {actuator_function_id, _actuator_function} -> actuator_function_id
+              actuator_function_id -> actuator_function_id
+            end
+          end)
+        actuator_functions_not_used =
+          Enum.map(actuator_functions, fn actuator_function ->
+            case actuator_function do
+              {actuator_function_id, _actuator_function} -> actuator_function_id
+              actuator_function_id ->
+                actuator_function_id
+            end
+          end)
+          |> (fn actuator_function_ids -> actuator_function_ids -- actuator_functions_used end).()
+        actuator_function_id =
+          Enum.random(actuator_functions_not_used)
+        new_actuator = %Actuator{
+          actuator_id: new_actuator_id,
+          actuator_function: actuator_function_id
+        }
+
+        {neuron, new_actuator} =
+          Neuron.connect_to_actuator(neuron, new_actuator)
+
+        actuators =
+          Map.put(actuators, new_actuator_id, new_actuator)
+
+        updated_neuron_layer =
+          Map.put(neuron_structs, neuron_id, neuron)
+        neurons =
+          Map.put(neurons, neuron_layer, updated_neuron_layer)
+
+        {neurons, actuators}
+    end
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -616,8 +669,25 @@ defmodule Mutations do
         actuators: actuators,
         sync_functions: sync_functions
              }) do
-    {updated_sensors, updated_neurons} = add_sensor(sensors, neurons, sync_functions)
-    {updated_sensors, updated_neurons, actuators}
+    case add_sensor(sensors, neurons, sync_functions) do
+      :mutation_did_not_occur -> :mutation_did_not_occur
+      {updated_sensors, updated_neurons} ->
+        {updated_sensors, updated_neurons, actuators}
+    end
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :add_actuator,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators,
+        actuator_functions: actuator_functions
+             }) do
+    case add_actuator(neurons, actuators, actuator_functions) do
+      :mutation_did_not_occur -> :mutation_did_not_occur
+      {updated_neurons, updated_actuators} ->
+        {sensors, updated_neurons, updated_actuators}
+    end
   end
 
 end

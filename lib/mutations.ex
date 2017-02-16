@@ -5,7 +5,8 @@ defmodule MutationProperties do
     activation_functions: Map.new(),
     sync_functions: Map.new(),
     actuator_functions: Map.new(),
-    mutation: nil
+    mutation: nil,
+    get_node_id: nil
 end
 defmodule Mutations do
 
@@ -168,30 +169,9 @@ defmodule Mutations do
     Map.put(neurons, random_from_layer, updated_from_layer)
   end
 
-  defp get_highest_neuron_id_in_structs(highest_neuron_id, []) do
-    highest_neuron_id
-  end
-
-  defp get_highest_neuron_id_in_structs(highest_neuron_id_so_far, [neuron_id | remaining_neurons]) do
-    case neuron_id > highest_neuron_id_so_far do
-      true -> get_highest_neuron_id_in_structs(neuron_id, remaining_neurons)
-      false -> get_highest_neuron_id_in_structs(highest_neuron_id_so_far, remaining_neurons)
-    end
-  end
-
-  defp get_new_neuron_id(highest_neuron_id, []) do
-    highest_neuron_id + 1
-  end
-
-  defp get_new_neuron_id(highest_neuron_id_so_far, [{_layer, neuron_structs} | remaining_layers]) do
-    neuron_structs_list = Map.keys(neuron_structs)
-    highest_neuron_id = get_highest_neuron_id_in_structs(highest_neuron_id_so_far, neuron_structs_list)
-    get_new_neuron_id(highest_neuron_id, remaining_layers)
-  end
-
-  defp add_neuron(neurons, activation_functions) do
+  defp add_neuron(neurons, activation_functions, get_node_id) do
     {new_neuron_layer, _structs} = Enum.random(neurons)
-    new_neuron_id = get_new_neuron_id(0, Map.to_list(neurons))
+    new_neuron_id = get_node_id.()
 
     {random_B_layer, random_B_structs} = Enum.random(neurons)
     {random_B_neuron_id, random_B_neuron} = Enum.random(random_B_structs)
@@ -234,8 +214,8 @@ defmodule Mutations do
     neurons_updated_with_A_B_and_new
   end
 
-  defp add_neuron_outsplice(neurons, actuators, activation_functions) do
-    new_neuron_id = get_new_neuron_id(0, Map.to_list(neurons))
+  defp add_neuron_outsplice(neurons, actuators, activation_functions, get_node_id) do
+    new_neuron_id = get_node_id.()
 
     {random_A_layer, random_A_structs} = Enum.random(neurons)
     {random_A_neuron_id, random_A_neuron} = Enum.random(random_A_structs)
@@ -322,8 +302,8 @@ defmodule Mutations do
     {neurons_updated_with_A_B_and_new, actuators}
   end
 
-  defp add_neuron_insplice(neurons, sensors, activation_functions) do
-    new_neuron_id = get_new_neuron_id(0, Map.to_list(neurons))
+  defp add_neuron_insplice(neurons, sensors, activation_functions, get_node_id) do
+    new_neuron_id = get_node_id.()
 
     {random_A_layer, random_A_structs} = Enum.random(neurons)
     {random_A_neuron_id, random_A_neuron} = Enum.random(random_A_structs)
@@ -445,7 +425,7 @@ defmodule Mutations do
     {neurons, actuators}
   end
 
-  def add_sensor(sensors, neurons, sync_functions) do
+  def add_sensor(sensors, neurons, sync_functions, get_node_id) do
     {neuron_layer, neuron_structs} =
       Enum.random(neurons)
     {neuron_id, neuron} =
@@ -455,10 +435,7 @@ defmodule Mutations do
       true ->
         :mutation_did_not_occur
       false ->
-        max_sensor_id =
-          Map.keys(sensors)
-          |> Enum.max
-        new_sensor_id = max_sensor_id + 1
+        new_sensor_id = get_node_id.()
         sync_functions_used =
           Enum.map(sensors, fn {_sensor_id, sensor} ->
             case sensor.sync_function do
@@ -498,7 +475,7 @@ defmodule Mutations do
     end
   end
 
-  def add_actuator(neurons, actuators, actuator_functions) do
+  def add_actuator(neurons, actuators, actuator_functions, get_node_id) do
     {neuron_layer, neuron_structs} =
       Enum.random(neurons)
     {neuron_id, neuron} =
@@ -508,10 +485,7 @@ defmodule Mutations do
       true ->
         :mutation_did_not_occur
       false ->
-        max_actuator_id =
-          Map.keys(actuators)
-          |> Enum.max
-        new_actuator_id = max_actuator_id + 1
+        new_actuator_id = get_node_id.()
         actuator_functions_used =
           Enum.map(actuators, fn {_actuator_id, actuator} ->
             case actuator.actuator_function do
@@ -630,9 +604,10 @@ defmodule Mutations do
         sensors: sensors,
         neurons: neurons,
         actuators: actuators,
-        activation_functions: activation_functions
+        activation_functions: activation_functions,
+        get_node_id: get_node_id
              }) do
-    updated_neurons = add_neuron(neurons, activation_functions)
+    updated_neurons = add_neuron(neurons, activation_functions, get_node_id)
     {sensors, updated_neurons, actuators}
   end
 
@@ -641,9 +616,11 @@ defmodule Mutations do
         sensors: sensors,
         neurons: neurons,
         actuators: actuators,
-        activation_functions: activation_functions
+        activation_functions: activation_functions,
+        get_node_id: get_node_id
              }) do
-    {updated_neurons, updated_actuators} = add_neuron_outsplice(neurons, actuators, activation_functions)
+    {updated_neurons, updated_actuators} =
+      add_neuron_outsplice(neurons, actuators, activation_functions, get_node_id)
     {sensors, updated_neurons, updated_actuators}
   end
 
@@ -652,9 +629,11 @@ defmodule Mutations do
         sensors: sensors,
         neurons: neurons,
         actuators: actuators,
-        activation_functions: activation_functions
+        activation_functions: activation_functions,
+        get_node_id: get_node_id
              }) do
-    {updated_sensors, updated_neurons} = add_neuron_insplice(neurons, sensors, activation_functions)
+    {updated_sensors, updated_neurons} =
+      add_neuron_insplice(neurons, sensors, activation_functions, get_node_id)
     {updated_sensors, updated_neurons, actuators}
   end
 
@@ -662,7 +641,7 @@ defmodule Mutations do
         mutation: :add_sensor_link,
         sensors: sensors,
         neurons: neurons,
-        actuators: actuators
+        actuators: actuators,
              }) do
     case add_sensor_link(sensors, neurons) do
       :mutation_did_not_occur -> :mutation_did_not_occur
@@ -686,9 +665,10 @@ defmodule Mutations do
         sensors: sensors,
         neurons: neurons,
         actuators: actuators,
-        sync_functions: sync_functions
+        sync_functions: sync_functions,
+        get_node_id: get_node_id
              }) do
-    case add_sensor(sensors, neurons, sync_functions) do
+    case add_sensor(sensors, neurons, sync_functions, get_node_id) do
       :mutation_did_not_occur -> :mutation_did_not_occur
       {updated_sensors, updated_neurons} ->
         {updated_sensors, updated_neurons, actuators}
@@ -700,9 +680,10 @@ defmodule Mutations do
         sensors: sensors,
         neurons: neurons,
         actuators: actuators,
-        actuator_functions: actuator_functions
+        actuator_functions: actuator_functions,
+        get_node_id: get_node_id
              }) do
-    case add_actuator(neurons, actuators, actuator_functions) do
+    case add_actuator(neurons, actuators, actuator_functions, get_node_id) do
       :mutation_did_not_occur -> :mutation_did_not_occur
       {updated_neurons, updated_actuators} ->
         {sensors, updated_neurons, updated_actuators}
@@ -752,7 +733,58 @@ defmodule Mutations do
     process_mutation_sequence(mutation_properties, mutation_sequence, {mutation_properties.sensors, mutation_properties.neurons, mutation_properties.actuators})
   end
 
+  defp get_highest_neuron_id([], highest_id) do
+    highest_id
+  end
+
+  defp get_highest_neuron_id([neuron_layer | remaining_layers], highest_id) do
+    highest_id_in_layer =
+      Map.keys(neuron_layer)
+      |> Enum.max
+    case highest_id_in_layer > highest_id do
+      true -> get_highest_neuron_id(remaining_layers, highest_id_in_layer)
+      false -> get_highest_neuron_id(remaining_layers, highest_id)
+    end
+  end
+
+  defp get_highest_neuron_id(neurons) do
+    get_highest_neuron_id(Map.values(neurons), 0)
+  end
+
   def mutate_neural_network(possible_mutations, mutation_properties) do
+    highest_sensor_id =
+      Map.keys(mutation_properties.sensors)
+      |> Enum.max
+    highest_actuator_id =
+      Map.keys(mutation_properties.actuators)
+      |> Enum.max
+    highest_neuron_id =
+      get_highest_neuron_id(mutation_properties.neurons)
+    highest_node_id =
+      case highest_sensor_id > highest_neuron_id do
+        true ->
+          case highest_sensor_id > highest_actuator_id do
+            true ->
+              highest_sensor_id
+            false ->
+              highest_actuator_id
+          end
+        false ->
+          case highest_neuron_id > highest_actuator_id do
+            true ->
+              highest_neuron_id
+            false ->
+              highest_actuator_id
+          end
+      end
+    {:ok, node_id_generation_pid} = NodeIdGenerator.start_link(highest_node_id)
+    get_node_id =
+    fn ->
+      NodeIdGenerator.get_node_id(node_id_generation_pid)
+    end
+    mutation_properties = %MutationProperties{mutation_properties |
+                                              get_node_id: get_node_id
+                                             }
     number_of_neurons =
       Enum.map(mutation_properties.neurons, &count_neurons_in_layer/1)
       |> Enum.sum
@@ -765,6 +797,8 @@ defmodule Mutations do
 
     mutated_neural_network =
       process_mutation_sequence(mutation_properties, mutation_sequence)
+
+    GenServer.stop(node_id_generation_pid)
 
     mutated_neural_network
   end

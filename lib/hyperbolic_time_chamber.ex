@@ -1,3 +1,12 @@
+defmodule HyperbolicTimeChamberState do
+  defstruct hyperbolic_time_chamber_properties: nil,
+    active_cortex_id: nil,
+    active_cortex_scores: [],
+    active_cortex_records: nil,
+    scored_generation_records: [],
+    remaining_generation: [],
+    chamber_registry_name: nil
+end
 defmodule HyperbolicTimeChamber do
   use GenServer
   defstruct fitness_function: nil,
@@ -7,7 +16,8 @@ defmodule HyperbolicTimeChamber do
     sync_sources: Map.new(),
     activation_functions: Map.new(),
     possible_mutations: [],
-    minds_per_generation: 5
+    minds_per_generation: 5,
+    fitness_function: nil
 
   defp get_sync_function_from_source(sync_sources, cortex_id, sync_function) do
     sync_function_id =
@@ -38,6 +48,7 @@ defmodule HyperbolicTimeChamber do
 
   defp hook_sensors_up_to_source(sync_sources, cortex_id, sensors) do
     Enum.map(sensors, &hook_sensor_up_to_source(sync_sources, cortex_id, &1))
+    |> Map.new
   end
 
   defp hook_actuator_up_to_source(actuator_sources, cortex_id, {actuator_id, actuator}) do
@@ -49,13 +60,15 @@ defmodule HyperbolicTimeChamber do
 
   defp hook_actuators_up_to_source(actuator_sources, cortex_id, actuators) do
     Enum.map(actuators, &hook_actuator_up_to_source(actuator_sources, cortex_id, &1))
+    |> Map.new
   end
 
-  def create_brain(registry_name, actuator_sources, sync_sources, {cortex_id, {sensors, neurons, actuators}}) do
+  defp create_brain(registry_name, sync_sources, actuator_sources, {cortex_id, {sensors, neurons, actuators}}) do
     sensors = hook_sensors_up_to_source(sync_sources, cortex_id, sensors)
     actuators = hook_actuators_up_to_source(actuator_sources, cortex_id, actuators)
-    cortex = Cortex.start_link(registry_name, cortex_id, sensors, neurons, actuators)
-    {cortex_id, cortex}
+    {:ok, _cortex_pid} = Cortex.start_link(registry_name, cortex_id, sensors, neurons, actuators)
+    :ok = Cortex.reset_network(registry_name, cortex_id)
+    :ok
   end
 
   defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
@@ -142,6 +155,73 @@ defmodule HyperbolicTimeChamber do
         |> get_new_generation_from_scored_records
       new_generation
     end
+  end
+
+  defp get_new_active_cortex(_sync_sources, _actuator_sources, _registry_name, []) do
+    :generation_is_complete
+  end
+
+  defp get_new_active_cortex(sync_sources, actuator_sources, registry_name, [{new_cortex_id, neural_network} | remaining_generation]) do
+    :ok = create_brain(registry_name, sync_sources, actuator_sources, {new_cortex_id, neural_network})
+    {new_cortex_id, neural_network, remaining_generation}
+  end
+
+  def think_and_act(chamber_pid) do
+    GenServer.call(chamber_pid, :think_and_act)
+  end
+
+  def start_link(chamber_name, hyperbolic_time_chamber_properties) do
+    {:ok, _registry_pid} = Registry.start_link(:unique, chamber_name)
+    {new_cortex_id, cortex_records, remaining_generation} =
+      get_new_active_cortex(hyperbolic_time_chamber_properties.sync_sources, hyperbolic_time_chamber_properties.actuator_sources, chamber_name, Map.to_list(hyperbolic_time_chamber_properties.starting_generation_records))
+    state = %HyperbolicTimeChamberState{
+      active_cortex_id: new_cortex_id,
+      active_cortex_records: cortex_records,
+      hyperbolic_time_chamber_properties: hyperbolic_time_chamber_properties,
+      remaining_generation: remaining_generation,
+      chamber_registry_name: chamber_name
+    }
+    GenServer.start_link(__MODULE__, state)
+  end
+
+  def handle_call(:think_and_act, _from,  state) do
+    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
+    updated_state =
+      case state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id) do
+        {:end_think_cycle, score} ->
+          final_score =
+            Enum.sum(state.active_cortex_scores) + score
+          Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
+          updated_scored_generation_records =
+            state.scored_generation_records ++ [{final_score, state.active_cortex_id, state.active_cortex_records}]
+          {new_active_cortex_id, active_cortex_records, updated_scored_generation_records, remaining_generation} =
+            case get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, state.remaining_generation) do
+              {new_cortex_id, cortex_records, remaining_generation} ->
+                {new_cortex_id, cortex_records, updated_scored_generation_records, remaining_generation}
+              :generation_is_complete ->
+                #TODO review this to list operation
+                mutated_generation =
+                  evolve(state.hyperbolic_time_chamber_properties, updated_scored_generation_records)
+                  |> Map.to_list
+                {new_cortex_id, cortex_records, remaining_generation} =
+                  get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, mutated_generation)
+                {new_cortex_id, cortex_records, [], remaining_generation}
+            end
+          %HyperbolicTimeChamberState{state |
+                                      active_cortex_id: new_active_cortex_id,
+                                      active_cortex_scores: [],
+                                      active_cortex_records: active_cortex_records,
+                                      scored_generation_records: updated_scored_generation_records,
+                                      remaining_generation: remaining_generation
+                                     }
+        {:continue_think_cycle, score} ->
+          updated_active_cortex_scores =
+            state.active_cortex_scores ++ [score]
+          %HyperbolicTimeChamberState{state |
+                                      active_cortex_scores: updated_active_cortex_scores
+          }
+      end
+    {:reply, :ok, updated_state}
   end
 
 end

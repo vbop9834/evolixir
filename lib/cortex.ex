@@ -157,6 +157,14 @@ defmodule Cortex do
     :ok = GenServer.call(via_tuple, :reset_network)
   end
 
+  def kill_cortex(registry_name, cortex_id) do
+    cortex_name =
+      {:via, Registry,
+       {registry_name, {cortex_id, :supervisor}}
+      }
+    Supervisor.stop(cortex_name)
+  end
+
   def start_link(registry_name, cortex_controller_pid, sensors, neurons, actuators) do
     registry_func = fn outbound_pid ->
                       {:via, Registry,
@@ -174,7 +182,7 @@ defmodule Cortex do
       neurons: neurons_with_registry,
       actuators: Map.values(actuators)
     }
-    Supervisor.start_link(__MODULE__, cortex)
+    Supervisor.start_link(__MODULE__, cortex, name: registry_func.(:supervisor))
   end
 
   def init(cortex) do

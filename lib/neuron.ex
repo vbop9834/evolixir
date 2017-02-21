@@ -195,6 +195,10 @@ defmodule Neuron do
     process_learning_and_update_inbound_connections(learning_function, remaining_inbound_connections, full_barrier, outbound_synapse, new_inbound_connections)
   end
 
+  def process_learning_for_neuron(nil, inbound_connections, _full_barrier, _outbound_synapse) do
+    inbound_connections
+  end
+
   def process_learning_for_neuron(learning_function, inbound_connections, full_barrier, outbound_synapse) do
     process_learning_and_update_inbound_connections(learning_function, Map.to_list(inbound_connections), full_barrier, outbound_synapse, Map.new())
   end

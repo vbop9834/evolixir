@@ -279,4 +279,30 @@ defmodule Evolixir.NeuronTest do
     assert updated_node_one_connection_id_two_weight == 3.13375
 
   end
+
+  test "process_learning_for_neuron should do nothing if the learning_function is nil" do
+    learning_function = nil
+    fake_node_id_one = 5
+    fake_node_one_connection_id_one = 1
+    fake_node_one_connection_id_two = 3
+    connections_from_node_one = %{
+      fake_node_one_connection_id_one => 5.2,
+      fake_node_one_connection_id_two => 1.2
+    }
+    inbound_connections = %{
+      fake_node_id_one => connections_from_node_one
+    }
+
+    full_barrier = %{
+      {fake_node_id_one, fake_node_one_connection_id_one} => 40.2,
+      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25
+    }
+
+    outbound_synapse = 0.78
+
+    updated_inbound_connections = Neuron.process_learning_for_neuron(learning_function, inbound_connections, full_barrier, outbound_synapse)
+
+    assert updated_inbound_connections == inbound_connections
+  end
+
 end

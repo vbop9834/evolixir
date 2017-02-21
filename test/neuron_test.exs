@@ -265,9 +265,9 @@ defmodule Evolixir.NeuronTest do
     }
 
     full_barrier = %{
-      {fake_node_id_one, fake_node_one_connection_id_one} => 40.2,
-      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25,
-      {fake_node_id_two, fake_node_two_connection_id_one} => 97.4
+      {fake_node_id_one, fake_node_one_connection_id_one} => %Synapse{ value: 40.2},
+      {fake_node_id_one, fake_node_one_connection_id_two} => %Synapse{ value: 4.25},
+      {fake_node_id_two, fake_node_two_connection_id_one} => %Synapse{ value: 97.4}
     }
 
     outbound_synapse = 0.78
@@ -308,8 +308,8 @@ defmodule Evolixir.NeuronTest do
     }
 
     full_barrier = %{
-      {fake_node_id_one, fake_node_one_connection_id_one} => 40.2,
-      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25
+      {fake_node_id_one, fake_node_one_connection_id_one} => %Synapse{ value: 40.2},
+      {fake_node_id_one, fake_node_one_connection_id_two} => %Synapse{ value: 4.25}
     }
 
     outbound_synapse = 0.78
@@ -317,6 +317,71 @@ defmodule Evolixir.NeuronTest do
     updated_inbound_connections = Neuron.process_learning_for_neuron(learning_function, inbound_connections, full_barrier, outbound_synapse)
 
     assert updated_inbound_connections == inbound_connections
+  end
+
+  test "Neuron should be able to handle hebbian learning function during operation" do
+    learning_coefficient = 0.9
+    learning_function = {:hebbian, learning_coefficient}
+    activation_function_with_id = {:sigmoid, &ActivationFunction.sigmoid/1}
+    weight = 1.0
+    neuron_id = :neuron
+    fake_from_node_id = 5
+    fake_test_helper_connection_id = 9
+    {inbound_connections_count_one, neuron_inbound_connection_id} =
+      NeuralNode.add_inbound_connection(fake_from_node_id, weight)
+    {inbound_connections, neuron_inbound_connection_two_id} =
+      NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
+    {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
+    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = GenServer.start_link(Neuron,
+      %Neuron{
+        neuron_id: neuron_id,
+        activation_function: activation_function_with_id,
+        inbound_connections: inbound_connections,
+        outbound_connections: outbound_connections,
+        learning_function: learning_function
+      }, name: neuron_id)
+
+    artificial_synapse =
+      %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_id}
+    artificial_synapse_two =
+      %Synapse{value: 1.0, from_node_id: fake_from_node_id, connection_id: neuron_inbound_connection_two_id}
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse_two})
+
+    #TODO find a better way to wait for the async op
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 1
+
+    {received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == fake_test_helper_connection_id
+    assert_in_delta received_synapse.value, 0.8807, 0.001
+    assert received_synapse.from_node_id == neuron_id
+
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse_two})
+
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 2
+
+    {_received_synapse, received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == fake_test_helper_connection_id
+    assert_in_delta received_synapse.value, 0.9730233, 0.001
+    assert received_synapse.from_node_id == neuron_id
+
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse})
+    :ok = GenServer.cast(neuron_id, {:receive_synapse, artificial_synapse_two})
+
+    :timer.sleep(5)
+    updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
+    assert tuple_size(updated_test_state.received_synapses) == 3
+
+    {_received_synapse, _received_synapse_two, received_synapse} = updated_test_state.received_synapses
+    assert received_synapse.connection_id == fake_test_helper_connection_id
+    assert_in_delta received_synapse.value, 0.99521, 0.001
+    assert received_synapse.from_node_id == neuron_id
   end
 
 end

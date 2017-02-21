@@ -102,8 +102,10 @@ defmodule Neuron do
         output_value = calculate_output_value(updated_barrier, activation_function, state.bias)
         outbound_connections = Map.keys(state.outbound_connections)
         send_output_value_to_outbound_connections(state.neuron_id, output_value, outbound_connections, state.registry_func)
+        updated_inbound_connections = process_learning_for_neuron(state.learning_function, state.inbound_connections, updated_barrier, output_value)
         %Neuron{state |
-                barrier: Map.new()
+                barrier: Map.new(),
+                inbound_connections: updated_inbound_connections
         }
       else
         %Neuron{state |
@@ -186,7 +188,8 @@ defmodule Neuron do
 
   defp process_learning_and_update_inbound_connections(learning_function, [{node_id, connections_from_node} | remaining_inbound_connections], full_barrier, outbound_synapse, new_inbound_connections) do
     get_weighted_inbound_synapse = fn connection_id ->
-      Map.get(full_barrier, {node_id, connection_id})
+      synapse = Map.get(full_barrier, {node_id, connection_id})
+      synapse.value
     end
     updated_connections_from_node =
       process_learning_function_for_connections_from_node(learning_function, Map.to_list(connections_from_node), get_weighted_inbound_synapse, outbound_synapse, Map.new())

@@ -245,6 +245,7 @@ defmodule Evolixir.NeuronTest do
   test "process_learning_for_neuron should handle the hebbian learning function" do
     learning_coefficient = 0.7
     learning_function = {:hebbian, learning_coefficient}
+
     fake_node_id_one = 5
     fake_node_one_connection_id_one = 1
     fake_node_one_connection_id_two = 3
@@ -252,13 +253,21 @@ defmodule Evolixir.NeuronTest do
       fake_node_one_connection_id_one => 5.2,
       fake_node_one_connection_id_two => 1.2
     }
+
+    fake_node_id_two = 2
+    fake_node_two_connection_id_one = 9
+    connections_from_node_two = %{
+      fake_node_two_connection_id_one => -0.25
+    }
     inbound_connections = %{
-      fake_node_id_one => connections_from_node_one
+      fake_node_id_one => connections_from_node_one,
+      fake_node_id_two => connections_from_node_two
     }
 
     full_barrier = %{
       {fake_node_id_one, fake_node_one_connection_id_one} => 40.2,
-      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25
+      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25,
+      {fake_node_id_two, fake_node_two_connection_id_one} => 97.4
     }
 
     outbound_synapse = 0.78
@@ -267,6 +276,7 @@ defmodule Evolixir.NeuronTest do
 
     assert updated_inbound_connections != inbound_connections
     assert Map.has_key?(updated_inbound_connections, fake_node_id_one)
+    assert Map.has_key?(updated_inbound_connections, fake_node_id_two)
 
     updated_connections_from_node_one = Map.get(updated_inbound_connections, fake_node_id_one)
     assert Map.has_key?(updated_connections_from_node_one, fake_node_one_connection_id_one)
@@ -278,6 +288,10 @@ defmodule Evolixir.NeuronTest do
     updated_node_one_connection_id_two_weight = Map.get(updated_connections_from_node_one, fake_node_one_connection_id_two)
     assert updated_node_one_connection_id_two_weight == 3.13375
 
+    updated_connections_from_node_two = Map.get(updated_inbound_connections, fake_node_id_two)
+    assert Map.has_key?(updated_connections_from_node_two, fake_node_two_connection_id_one)
+    updated_node_two_connection_id_one_weight = Map.get(updated_connections_from_node_two, fake_node_two_connection_id_one)
+    assert updated_node_two_connection_id_one_weight == -212.9716
   end
 
   test "process_learning_for_neuron should do nothing if the learning_function is nil" do

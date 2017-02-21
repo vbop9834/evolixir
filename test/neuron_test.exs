@@ -241,4 +241,42 @@ defmodule Evolixir.NeuronTest do
     updated_test_state = GenServer.call(neuron_test_helper_pid, :get_state)
     assert tuple_size(updated_test_state.received_synapses) == 0
   end
+
+  test "process_learning_for_neuron should handle the hebbian learning function" do
+    learning_coefficient = 0.7
+    learning_function = {:hebbian, learning_coefficient}
+    fake_node_id_one = 5
+    fake_node_one_connection_id_one = 1
+    fake_node_one_connection_id_two = 3
+    connections_from_node_one = %{
+      fake_node_one_connection_id_one => 5.2,
+      fake_node_one_connection_id_two => 1.2
+    }
+    inbound_connections = %{
+      fake_node_id_one => connections_from_node_one
+    }
+
+    full_barrier = %{
+      {fake_node_id_one, fake_node_one_connection_id_one} => 40.2,
+      {fake_node_id_one, fake_node_one_connection_id_two} => 4.25
+    }
+
+    outbound_synapse = 0.78
+
+    updated_inbound_connections = Neuron.process_learning_for_neuron(learning_function, inbound_connections, full_barrier, outbound_synapse)
+
+    assert updated_inbound_connections != inbound_connections
+    assert Map.has_key?(updated_inbound_connections, fake_node_id_one)
+
+    updated_connections_from_node_one = Map.get(updated_inbound_connections, fake_node_id_one)
+    assert Map.has_key?(updated_connections_from_node_one, fake_node_one_connection_id_one)
+    assert Map.has_key?(updated_connections_from_node_one, fake_node_one_connection_id_two)
+
+    updated_node_one_connection_id_one_weight = Map.get(updated_connections_from_node_one, fake_node_one_connection_id_one)
+    assert updated_node_one_connection_id_one_weight == 9.421
+
+    updated_node_one_connection_id_two_weight = Map.get(updated_connections_from_node_one, fake_node_one_connection_id_two)
+    assert updated_node_one_connection_id_two_weight == 3.13375
+
+  end
 end

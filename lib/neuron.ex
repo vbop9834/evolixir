@@ -22,7 +22,8 @@ defmodule Neuron do
     inbound_connections: Map.new(),
     outbound_connections: Map.new(),
     activation_function: {:sigmoid, &ActivationFunction.sigmoid/1},
-    neuron_id: nil
+    neuron_id: nil,
+    learning_function: nil
 
   def start_link(neuron) do
     case neuron.registry_func do
@@ -113,7 +114,6 @@ defmodule Neuron do
   end
 
   def handle_call({:receive_blank_synapse, synapse}, _from, state) do
-    #TODO pattern match error here if nil
     updated_barrier =
       Map.put(state.barrier, {synapse.from_node_id, synapse.connection_id}, synapse)
     updated_state =
@@ -161,6 +161,42 @@ defmodule Neuron do
                                  inbound_connections: updated_inbound_connections
                                 }
     {updated_neuron, updated_actuator}
+  end
+
+  defp process_learning_function({:hebbian, learning_coefficient}, old_weight, weighted_inbound_synapse, outbound_synapse) do
+    unweighted_inbound_synapse = weighted_inbound_synapse / old_weight
+    old_weight + learning_coefficient * unweighted_inbound_synapse * outbound_synapse
+  end
+
+  defp process_learning_function_for_connections_from_node(_learning_function, [], _weighted_inbound_synapse, _outbound_synapse, connections_from_node) do
+    connections_from_node
+  end
+
+  defp process_learning_function_for_connections_from_node(learning_function, [{connection_id, old_weight} | remaining_connections], get_weighted_inbound_synapse, outbound_synapse, new_connections_from_node) do
+    weighted_inbound_synapse = get_weighted_inbound_synapse.(connection_id)
+    new_weight = process_learning_function(learning_function, old_weight, weighted_inbound_synapse, outbound_synapse)
+    new_connections_from_node =
+      Map.put(new_connections_from_node, connection_id, new_weight)
+    process_learning_function_for_connections_from_node(learning_function, remaining_connections, get_weighted_inbound_synapse, outbound_synapse, new_connections_from_node)
+  end
+
+  defp process_learning_and_update_inbound_connections(_learning_function, [], _full_barrier, _outbound_synapse, new_inbound_connections) do
+    new_inbound_connections
+  end
+
+  defp process_learning_and_update_inbound_connections(learning_function, [{node_id, connections_from_node} | remaining_inbound_connections], full_barrier, outbound_synapse, new_inbound_connections) do
+    get_weighted_inbound_synapse = fn connection_id ->
+      Map.get(full_barrier, {node_id, connection_id})
+    end
+    updated_connections_from_node =
+      process_learning_function_for_connections_from_node(learning_function, Map.to_list(connections_from_node), get_weighted_inbound_synapse, outbound_synapse, Map.new())
+    new_inbound_connections =
+      Map.put(new_inbound_connections, node_id, updated_connections_from_node)
+    process_learning_and_update_inbound_connections(learning_function, remaining_inbound_connections, full_barrier, outbound_synapse, new_inbound_connections)
+  end
+
+  def process_learning_for_neuron(learning_function, inbound_connections, full_barrier, outbound_synapse) do
+    process_learning_and_update_inbound_connections(learning_function, Map.to_list(inbound_connections), full_barrier, outbound_synapse, Map.new())
   end
 
 end

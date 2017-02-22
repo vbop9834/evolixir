@@ -11,11 +11,32 @@ defmodule Evolixir.StochasticHillClimberTest do
     neuron = %Neuron{
       neuron_id: neuron_id
     }
-    actuator_id = 3
+
+    neuron_id_two = 3
+    neuron_two = %Neuron{
+      neuron_id: neuron_id_two
+    }
+    actuator_id = 4
     actuator = %Actuator{
       actuator_id: actuator_id
     }
+
     {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
+
+    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
+    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
+    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
+
+    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
+    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
+    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
+    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
+
     {neuron, actuator} = Neuron.connect_to_actuator(neuron, actuator)
 
     sensors = %{
@@ -24,7 +45,8 @@ defmodule Evolixir.StochasticHillClimberTest do
     neuron_layer = 1
     neurons = %{
       neuron_layer => %{
-        neuron_id => neuron
+        neuron_id => neuron,
+        neuron_id_two => neuron_two
       }
     }
     actuators = %{
@@ -39,7 +61,7 @@ defmodule Evolixir.StochasticHillClimberTest do
       assert perturbed_neural_network != neural_network
     end
 
-    test_perturbed_neural_networks.(perturbed_neural_networks)
+    Enum.each(perturbed_neural_networks, test_perturbed_neural_networks)
   end
 
 end

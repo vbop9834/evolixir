@@ -38,7 +38,7 @@ defmodule StochasticHillClimber do
     total_count
   end
 
-  defp count_total_inbound_connections([{from_node_id, connections_from_node} | remaining_connections], total_count) do
+  defp count_total_inbound_connections([{_from_node_id, connections_from_node} | remaining_connections], total_count) do
     total_count = Enum.count(connections_from_node) + total_count
     count_total_inbound_connections(remaining_connections, total_count)
   end

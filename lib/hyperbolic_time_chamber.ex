@@ -170,6 +170,52 @@ defmodule HyperbolicTimeChamber do
     GenServer.call(chamber_pid, :think_and_act)
   end
 
+  defp process_fitness_function_result({:end_think_cycle, score}, state) do
+    final_score = Enum.sum(state.active_cortex_scores) + score
+    Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
+
+    updated_scored_generation_records =
+      state.scored_generation_records ++ [{final_score, state.active_cortex_id, state.active_cortex_records}]
+
+    #TODO refactor this into multiple functions
+    {new_active_cortex_id, active_cortex_records,
+     updated_scored_generation_records, remaining_generation} =
+      case get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, state.remaining_generation) do
+        {new_cortex_id, cortex_records, remaining_generation} ->
+          {new_cortex_id, cortex_records, updated_scored_generation_records, remaining_generation}
+        :generation_is_complete ->
+          #TODO review this to list operation
+          mutated_generation =
+            evolve(state.hyperbolic_time_chamber_properties, updated_scored_generation_records)
+            |> Map.to_list
+          {new_cortex_id, cortex_records, remaining_generation} =
+            get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, mutated_generation)
+          {new_cortex_id, cortex_records, [], remaining_generation}
+      end
+
+    %HyperbolicTimeChamberState{state |
+                                active_cortex_id: new_active_cortex_id,
+                                active_cortex_scores: [],
+                                active_cortex_records: active_cortex_records,
+                                scored_generation_records: updated_scored_generation_records,
+                                remaining_generation: remaining_generation
+    }
+  end
+
+  defp process_fitness_function_result({:continue_think_cycle, score}, state) do
+    updated_active_cortex_scores =
+      state.active_cortex_scores ++ [score]
+    %HyperbolicTimeChamberState{state |
+                                active_cortex_scores: updated_active_cortex_scores
+    }
+  end
+
+  def process_think_and_Act(state) do
+    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
+    fitness_function_result = state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id)
+    process_fitness_function_result(fitness_function_result, state)
+  end
+
   def start_link(chamber_name, hyperbolic_time_chamber_properties) do
     {:ok, _registry_pid} = Registry.start_link(:unique, chamber_name)
     {new_cortex_id, cortex_records, remaining_generation} =
@@ -185,42 +231,8 @@ defmodule HyperbolicTimeChamber do
   end
 
   def handle_call(:think_and_act, _from,  state) do
-    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
     updated_state =
-      case state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id) do
-        {:end_think_cycle, score} ->
-          final_score =
-            Enum.sum(state.active_cortex_scores) + score
-          Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
-          updated_scored_generation_records =
-            state.scored_generation_records ++ [{final_score, state.active_cortex_id, state.active_cortex_records}]
-          {new_active_cortex_id, active_cortex_records, updated_scored_generation_records, remaining_generation} =
-            case get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, state.remaining_generation) do
-              {new_cortex_id, cortex_records, remaining_generation} ->
-                {new_cortex_id, cortex_records, updated_scored_generation_records, remaining_generation}
-              :generation_is_complete ->
-                #TODO review this to list operation
-                mutated_generation =
-                  evolve(state.hyperbolic_time_chamber_properties, updated_scored_generation_records)
-                  |> Map.to_list
-                {new_cortex_id, cortex_records, remaining_generation} =
-                  get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, mutated_generation)
-                {new_cortex_id, cortex_records, [], remaining_generation}
-            end
-          %HyperbolicTimeChamberState{state |
-                                      active_cortex_id: new_active_cortex_id,
-                                      active_cortex_scores: [],
-                                      active_cortex_records: active_cortex_records,
-                                      scored_generation_records: updated_scored_generation_records,
-                                      remaining_generation: remaining_generation
-                                     }
-        {:continue_think_cycle, score} ->
-          updated_active_cortex_scores =
-            state.active_cortex_scores ++ [score]
-          %HyperbolicTimeChamberState{state |
-                                      active_cortex_scores: updated_active_cortex_scores
-          }
-      end
+      process_think_and_Act(state)
     {:reply, :ok, updated_state}
   end
 

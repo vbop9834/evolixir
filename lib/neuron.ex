@@ -206,4 +206,13 @@ defmodule Neuron do
     process_learning_and_update_inbound_connections(learning_function, Map.to_list(inbound_connections), full_barrier, outbound_synapse, Map.new())
   end
 
+  defp count_neurons_in_layer({_neuron_layer, neuron_structs}) do
+    Enum.count(neuron_structs)
+  end
+
+  def count_total_neurons(neurons) do
+    Enum.map(neurons, &count_neurons_in_layer/1)
+    |> Enum.sum
+  end
+
 end

@@ -29,7 +29,7 @@ defmodule Mutations do
     ]
   end
 
-  defp get_random_weight() do
+  def get_random_weight() do
     min_weight_possible = -1.0 * (:math.pi / 2.0)
     max_weight_possible = :math.pi / 2.0
     :random.uniform() * (max_weight_possible - min_weight_possible) + min_weight_possible
@@ -706,10 +706,6 @@ defmodule Mutations do
     end).()
   end
 
-  defp count_neurons_in_layer({_neuron_layer, neuron_structs}) do
-    Enum.count(neuron_structs)
-  end
-
   defp process_mutation_sequence(_mutation_properties, [], {sensors, neurons, actuators}) do
     {sensors, neurons, actuators}
   end
@@ -786,8 +782,7 @@ defmodule Mutations do
                                               get_node_id: get_node_id
                                              }
     number_of_neurons =
-      Enum.map(mutation_properties.neurons, &count_neurons_in_layer/1)
-      |> Enum.sum
+      Neuron.count_total_neurons(mutation_properties.neurons)
 
     number_of_nodes =
       number_of_neurons + Enum.count(mutation_properties.sensors) + Enum.count(mutation_properties.actuators)

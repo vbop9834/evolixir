@@ -292,7 +292,7 @@ defmodule HyperbolicTimeChamber do
     }
   end
 
-  def process_think_and_Act(state) do
+  def process_think_and_act(state) do
     active_cortex_id =
       case state.active_cortex_id do
         {cortex_id, _perturb_id} ->
@@ -322,7 +322,7 @@ defmodule HyperbolicTimeChamber do
 
   def handle_call(:think_and_act, _from,  state) do
     updated_state =
-      process_think_and_Act(state)
+      process_think_and_act(state)
     {:reply, :ok, updated_state}
   end
 

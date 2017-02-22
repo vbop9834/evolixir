@@ -369,7 +369,9 @@ defmodule Evolixir.HyperbolicTimeChamber do
     select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(50)
 
     fitness_function =
-      fn _cortex_id ->
+      fn {cortex_id, perturb_id} ->
+        assert cortex_id > 0
+        assert perturb_id >= 0
         {:continue_think_cycle, :random.uniform()}
       end
 

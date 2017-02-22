@@ -136,12 +136,39 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp get_new_generation_from_scored_records([{_score, cortex_id, neural_network} | remaining_scored_records], new_generation) do
-    new_generation = Map.put(new_generation, cortex_id, neural_network)
-    get_new_generation_from_scored_records(remaining_scored_records, new_generation)
+    case cortex_id do
+      {cortex_id, _perturb_id} ->
+        new_generation = Map.put(new_generation, cortex_id, neural_network)
+        get_new_generation_from_scored_records(remaining_scored_records, new_generation)
+      cortex_id ->
+        new_generation = Map.put(new_generation, cortex_id, neural_network)
+        get_new_generation_from_scored_records(remaining_scored_records, new_generation)
+    end
   end
 
   defp get_new_generation_from_scored_records(scored_generation_records) do
     get_new_generation_from_scored_records(scored_generation_records, Map.new())
+  end
+
+  defp distinct_scored_records_by_cortex_id([], distinct_records) do
+    distinct_records
+  end
+
+  defp distinct_scored_records_by_cortex_id([{score, {cortex_id, _perturb_id}, perturbed_neural_network} | remaining_scores], distinct_records) do
+    {_cortex_id, current_score, neural_network} = Map.get(distinct_records, cortex_id, {cortex_id, 0, nil})
+    updated_current_cortex_scores =
+      case score > current_score do
+        true ->
+          {score, perturbed_neural_network}
+        false ->
+          {current_score, neural_network}
+      end
+    distinct_records = Map.put(distinct_records, cortex_id, updated_current_cortex_scores)
+    distinct_scored_records_by_cortex_id(remaining_scores, distinct_records)
+  end
+
+  defp distinct_scored_records_by_cortex_id(_scored_records, _distinct_records) do
+    :did_not_perturb
   end
 
   def get_select_fit_population_function(percent_of_generation_to_keep) do
@@ -150,7 +177,18 @@ defmodule HyperbolicTimeChamber do
       number_of_records_to_keep =
         Enum.count(scored_generation_records) * decimal_percent
         |> round
-      sorted_records = scored_generation_records |> Enum.sort
+      distinct_scored_generation_records = distinct_scored_records_by_cortex_id(scored_generation_records, Map.new())
+      sorted_records =
+        case distinct_scored_generation_records do
+          :did_not_perturb ->
+            scored_generation_records |> Enum.sort
+          distinct_scored_generation_records ->
+            flatten_distinct_scores = fn {cortex_id, {score, neural_network}} ->
+              {score, cortex_id, neural_network}
+            end
+            Enum.map(distinct_scored_generation_records, flatten_distinct_scores)
+            |> Enum.sort
+        end
       new_generation =
         Enum.take(sorted_records, number_of_records_to_keep)
         |> get_new_generation_from_scored_records
@@ -165,7 +203,6 @@ defmodule HyperbolicTimeChamber do
   defp get_new_active_cortex_from_perturbed_networks([{perturb_id, {sensors, neurons, actuators}} | remaining_networks]) do
     {perturb_id, {sensors, neurons, actuators}, remaining_networks}
   end
-
 
   defp get_new_active_cortex(_sync_sources, _actuator_sources, _registry_name, {_, []}) do
     :generation_is_complete
@@ -193,12 +230,12 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp get_perturbed_networks([], _max_attempts_possible, perturbed_generation) do
-    perturbed_generation
+    Map.to_list(perturbed_generation)
   end
 
   defp get_perturbed_networks([{cortex_id, neural_network} | remaining_generation], max_attempts_possible, perturbed_generation) do
     perturbed_neural_networks = StochasticHillClimber.perturb_weights_in_neural_network(neural_network, max_attempts_possible)
-    perturbed_neural_networks_with_original_topology = Map.put(perturbed_neural_networks, 0, neural_network)
+    perturbed_neural_networks_with_original_topology = [{0, neural_network}] ++ perturbed_neural_networks
     perturbed_generation = Map.put(perturbed_generation, cortex_id, perturbed_neural_networks_with_original_topology)
     get_perturbed_networks(remaining_generation, max_attempts_possible, perturbed_generation)
   end
@@ -208,7 +245,7 @@ defmodule HyperbolicTimeChamber do
       nil ->
         {:did_not_perturb, generation}
       max_attempts_possible ->
-        perturbed_generation = get_perturbed_networks(generation, max_attempts_possible, [])
+        perturbed_generation = get_perturbed_networks(generation, max_attempts_possible, Map.new())
         {:did_perturb, perturbed_generation}
       end
   end
@@ -234,7 +271,8 @@ defmodule HyperbolicTimeChamber do
           perturbed_generation = get_perturbed_networks(state.hyperbolic_time_chamber_properties, mutated_generation)
           {new_cortex_id, cortex_records, remaining_generation} =
             get_new_active_cortex(state.hyperbolic_time_chamber_properties.sync_sources, state.hyperbolic_time_chamber_properties.actuator_sources, state.chamber_registry_name, perturbed_generation)
-          {new_cortex_id, cortex_records, [], remaining_generation}
+          empty_scored_records = []
+          {new_cortex_id, cortex_records, empty_scored_records, remaining_generation}
       end
 
     %HyperbolicTimeChamberState{state |
@@ -255,15 +293,23 @@ defmodule HyperbolicTimeChamber do
   end
 
   def process_think_and_Act(state) do
-    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
+    active_cortex_id =
+      case state.active_cortex_id do
+        {cortex_id, _perturb_id} ->
+          cortex_id
+        cortex_id ->
+          cortex_id
+      end
+    Cortex.think(state.chamber_registry_name, active_cortex_id)
     fitness_function_result = state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id)
     process_fitness_function_result(fitness_function_result, state)
   end
 
   def start_link(chamber_name, hyperbolic_time_chamber_properties) do
     {:ok, _registry_pid} = Registry.start_link(:unique, chamber_name)
+    perturbed_generation = get_perturbed_networks(hyperbolic_time_chamber_properties, Map.to_list(hyperbolic_time_chamber_properties.starting_generation_records))
     {new_cortex_id, cortex_records, remaining_generation} =
-      get_new_active_cortex(hyperbolic_time_chamber_properties.sync_sources, hyperbolic_time_chamber_properties.actuator_sources, chamber_name, {:did_not_perturb, Map.to_list(hyperbolic_time_chamber_properties.starting_generation_records)})
+      get_new_active_cortex(hyperbolic_time_chamber_properties.sync_sources, hyperbolic_time_chamber_properties.actuator_sources, chamber_name, perturbed_generation)
     state = %HyperbolicTimeChamberState{
       active_cortex_id: new_cortex_id,
       active_cortex_records: cortex_records,

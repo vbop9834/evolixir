@@ -57,7 +57,7 @@ defmodule Evolixir.StochasticHillClimberTest do
     max_attempts_possible = 10
     perturbed_neural_networks = StochasticHillClimber.perturb_weights_in_neural_network(neural_network, max_attempts_possible)
 
-    test_perturbed_neural_networks = fn perturbed_neural_network ->
+    test_perturbed_neural_networks = fn {_perturb_id, perturbed_neural_network} ->
       assert perturbed_neural_network != neural_network
     end
 

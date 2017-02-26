@@ -18,7 +18,8 @@ defmodule HyperbolicTimeChamber do
     possible_mutations: [],
     minds_per_generation: 5,
     fitness_function: nil,
-    max_attempts_to_perturb: nil
+    max_attempts_to_perturb: nil,
+    end_of_generation_function: nil
 
   defp get_sync_function_from_source(sync_sources, cortex_id, sync_function) do
     sync_function_id =
@@ -265,6 +266,10 @@ defmodule HyperbolicTimeChamber do
           {new_cortex_id, cortex_records, updated_scored_generation_records, remaining_generation}
         :generation_is_complete ->
           #TODO review this to list operation
+          case state.hyperbolic_time_chamber_properties.end_of_generation_function do
+            nil -> ()
+            end_of_generation_function -> end_of_generation_function.(updated_scored_generation_records)
+          end
           mutated_generation =
             evolve(state.hyperbolic_time_chamber_properties, updated_scored_generation_records)
             |> Map.to_list

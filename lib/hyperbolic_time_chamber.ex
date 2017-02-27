@@ -253,7 +253,12 @@ defmodule HyperbolicTimeChamber do
 
   defp process_fitness_function_result({:end_think_cycle, score}, state) do
     final_score = Enum.sum(state.active_cortex_scores) + score
-    Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
+    active_cortex_id =
+      case state.active_cortex_id do
+        {cortex_id, _perturb_id} -> cortex_id
+        cortex_id -> cortex_id
+      end
+    Cortex.kill_cortex(state.chamber_registry_name, active_cortex_id)
 
     updated_scored_generation_records =
       state.scored_generation_records ++ [{final_score, state.active_cortex_id, state.active_cortex_records}]

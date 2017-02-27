@@ -92,7 +92,8 @@ end
 
 defmodule Cortex do
   use Supervisor
-  defstruct cortex_controller_pid: nil,
+  defstruct perturb_id: nil,
+    cortex_id: nil,
     registry_name: nil,
     registry_func: nil,
     sensors: [],
@@ -147,14 +148,32 @@ defmodule Cortex do
     worker(Actuator, [registry_func, actuator_struct], restart: :transient, id: actuator_name)
   end
 
+  def think(registry_name, {cortex_id, perturb_id}) do
+    via_tuple = {:via, Registry, {registry_name, {cortex_id, perturb_id, :controller}}}
+    :ok = GenServer.call(via_tuple, :think)
+  end
+
   def think(registry_name, cortex_id) do
     via_tuple = {:via, Registry, {registry_name, {cortex_id, :controller}}}
     :ok = GenServer.call(via_tuple, :think)
   end
 
+  def reset_network(registry_name, {cortex_id, perturb_id}) do
+    via_tuple = {:via, Registry, {registry_name, {cortex_id, perturb_id, :controller}}}
+    :ok = GenServer.call(via_tuple, :reset_network)
+  end
+
   def reset_network(registry_name, cortex_id) do
     via_tuple = {:via, Registry, {registry_name, {cortex_id, :controller}}}
     :ok = GenServer.call(via_tuple, :reset_network)
+  end
+
+  def kill_cortex(registry_name, {cortex_id, perturb_id}) do
+    cortex_name =
+    {:via, Registry,
+     {registry_name, {cortex_id, perturb_id, :supervisor}}
+    }
+    Supervisor.stop(cortex_name)
   end
 
   def kill_cortex(registry_name, cortex_id) do
@@ -165,28 +184,50 @@ defmodule Cortex do
     Supervisor.stop(cortex_name)
   end
 
-  def start_link(registry_name, cortex_controller_pid, sensors, neurons, actuators) do
-    registry_func = fn outbound_pid ->
-                      {:via, Registry,
-                       {registry_name, {cortex_controller_pid, outbound_pid}}
-                      }
-    end
+  defp get_cortex_properties(registry_name, cortex_id, perturb_id, registry_func, sensors, neurons, actuators) do
     sensors_with_registry = Enum.map(sensors, &get_sensor_with_registry(registry_func, &1))
     neurons_with_registry = Enum.map(neurons, &get_neurons_with_registry(registry_func, &1))
 
-    cortex = %Cortex{
+    %Cortex{
+      cortex_id: cortex_id,
+      perturb_id: perturb_id,
       registry_func: registry_func,
       registry_name: registry_name,
-      cortex_controller_pid: cortex_controller_pid,
       sensors: sensors_with_registry,
       neurons: neurons_with_registry,
       actuators: Map.values(actuators)
     }
-    Supervisor.start_link(__MODULE__, cortex, name: registry_func.(:supervisor))
+  end
+
+  def start_link(registry_name, {cortex_id, perturb_id}, sensors, neurons, actuators) do
+    registry_func = fn outbound_pid ->
+      {:via, Registry,
+       {registry_name, {cortex_id, perturb_id, outbound_pid}}
+      }
+    end
+    cortex_properties = get_cortex_properties(registry_name, cortex_id, perturb_id, registry_func, sensors, neurons, actuators)
+    Supervisor.start_link(__MODULE__, cortex_properties, name: registry_func.(:supervisor))
+  end
+
+  def start_link(registry_name, cortex_id, sensors, neurons, actuators) do
+    registry_func = fn outbound_pid ->
+                      {:via, Registry,
+                       {registry_name, {cortex_id, outbound_pid}}
+                      }
+    end
+    perturb_id = nil
+    cortex_properties = get_cortex_properties(registry_name, cortex_id, perturb_id, registry_func, sensors, neurons, actuators)
+    Supervisor.start_link(__MODULE__, cortex_properties, name: registry_func.(:supervisor))
   end
 
   def init(cortex) do
-    cortex_controller_id = {:via, Registry, {cortex.registry_name, {cortex.cortex_controller_pid, :controller}}}
+    cortex_controller_id =
+    case cortex.perturb_id do
+      nil ->
+        {:via, Registry, {cortex.registry_name, {cortex.cortex_id, :controller}}}
+      perturb_id ->
+        {:via, Registry, {cortex.registry_name, {cortex.cortex_id, perturb_id, :controller}}}
+    end
     controller_child = worker(CortexController,
       [cortex_controller_id, %CortexController{
         registry_func: cortex.registry_func,

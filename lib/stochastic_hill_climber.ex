@@ -107,7 +107,7 @@ defmodule StochasticHillClimber do
           network_size_max_attempts
       end
 
-    Enum.map(Enum.to_list([1..max_attempts]), fn perturb_id ->
+    Enum.map(Enum.to_list(1..max_attempts), fn perturb_id ->
       neurons = perturb_weights_in_neurons(neurons, probability_of_neuron_perturbing)
       {perturb_id, {sensors, neurons, actuators}}
     end)

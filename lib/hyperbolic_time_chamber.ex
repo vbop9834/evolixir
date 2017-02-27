@@ -156,7 +156,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp distinct_scored_records_by_cortex_id([{score, {cortex_id, _perturb_id}, perturbed_neural_network} | remaining_scores], distinct_records) do
-    {_cortex_id, current_score, neural_network} = Map.get(distinct_records, cortex_id, {cortex_id, 0, nil})
+    {_cortex_id, {current_score, neural_network}} = Map.get(distinct_records, cortex_id, {cortex_id, 0, nil})
     updated_current_cortex_scores =
       case score > current_score do
         true ->

@@ -223,7 +223,7 @@ defmodule HyperbolicTimeChamber do
       :perturb_is_complete ->
         get_new_active_cortex(sync_sources, actuator_sources, registry_name, {:did_perturb, remaining_generation})
       {perturb_id, neural_network, remaining_networks} ->
-        :ok = create_brain(registry_name, sync_sources, actuator_sources, {new_cortex_id, neural_network})
+        :ok = create_brain(registry_name, sync_sources, actuator_sources, {{new_cortex_id, perturb_id}, neural_network})
         remaining_generation = [{new_cortex_id, remaining_networks}] ++ remaining_generation
         {{new_cortex_id, perturb_id}, neural_network, {:did_perturb, remaining_generation}}
     end
@@ -256,12 +256,7 @@ defmodule HyperbolicTimeChamber do
 
   defp process_fitness_function_result({:end_think_cycle, score}, state) do
     final_score = Enum.sum(state.active_cortex_scores) + score
-    active_cortex_id =
-      case state.active_cortex_id do
-        {cortex_id, _perturb_id} -> cortex_id
-        cortex_id -> cortex_id
-      end
-    Cortex.kill_cortex(state.chamber_registry_name, active_cortex_id)
+    Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
 
     updated_scored_generation_records =
       state.scored_generation_records ++ [{final_score, state.active_cortex_id, state.active_cortex_records}]
@@ -306,14 +301,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   def process_think_and_act(state) do
-    active_cortex_id =
-      case state.active_cortex_id do
-        {cortex_id, _perturb_id} ->
-          cortex_id
-        cortex_id ->
-          cortex_id
-      end
-    Cortex.think(state.chamber_registry_name, active_cortex_id)
+    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
     fitness_function_result = state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id)
     process_fitness_function_result(fitness_function_result, state)
   end

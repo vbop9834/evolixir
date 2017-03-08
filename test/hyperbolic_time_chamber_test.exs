@@ -2,6 +2,56 @@ defmodule Evolixir.HyperbolicTimeChamber do
   use ExUnit.Case
   doctest HyperbolicTimeChamber
 
+  test "get_select_fit_population_function should return a function that selects a top percentage of scored neural networks" do
+    percentage_to_keep = 50
+    select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(percentage_to_keep)
+    cortex_id_one = 1
+    cortex_id_two = 5
+    score_one = 50
+    score_two = 25
+    neural_network_one = :nn_one
+    neural_network_two = :nn_two
+    scored_generation_records = [
+      {score_one, cortex_id_one, neural_network_one},
+      {score_two, cortex_id_two, neural_network_two},
+    ]
+
+    fit_population = select_fit_population_function.(scored_generation_records)
+    assert Enum.count(fit_population) == 1
+    assert Map.has_key?(fit_population, cortex_id_one) == true
+    fit_neural_network = Map.get(fit_population, cortex_id_one)
+    assert fit_neural_network == neural_network_one
+  end
+
+  test "get_select_fit_population_function should return a function that selects a top percentage of scored neural networks and sorts through scored perturbed networks" do
+    percentage_to_keep = 50
+    select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(percentage_to_keep)
+    cortex_id_one = 1
+    cortex_id_two = 5
+    perturb_id_one = 1
+    perturb_id_two = 2
+    score_one_perturb_one = 50
+    score_one_perturb_two = 250
+    score_two_perturb_one = 25
+    score_two_perturb_two = 5
+    neural_network_one_perturb_one = :nn_one
+    neural_network_one_perturb_two = :nn_one_perturb_two
+    neural_network_two_perturb_one = :nn_two
+    neural_network_two_perturb_two = :nn_two_perturb_two
+    scored_generation_records = [
+      {score_one_perturb_one, {cortex_id_one, perturb_id_one}, neural_network_one_perturb_one},
+      {score_one_perturb_two, {cortex_id_one, perturb_id_two}, neural_network_one_perturb_two},
+      {score_two_perturb_one, {cortex_id_two, perturb_id_one}, neural_network_two_perturb_one},
+      {score_two_perturb_two, {cortex_id_two, perturb_id_two}, neural_network_two_perturb_two}
+    ]
+
+    fit_population = select_fit_population_function.(scored_generation_records)
+    assert Enum.count(fit_population) == 1
+    assert Map.has_key?(fit_population, cortex_id_one) == true
+    fit_neural_network = Map.get(fit_population, cortex_id_one)
+    assert fit_neural_network == neural_network_one_perturb_two
+  end
+
   test "hook_actuators_up_to_source should hook actuators into actuator function sources" do
     cortex_id = :unique_cortex
     actuator_function = :actuator_function

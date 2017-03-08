@@ -178,21 +178,24 @@ defmodule HyperbolicTimeChamber do
   def get_select_fit_population_function(percent_of_generation_to_keep) do
     decimal_percent = percent_of_generation_to_keep / 100.0
     fn scored_generation_records ->
-      number_of_records_to_keep =
-        Enum.count(scored_generation_records) * decimal_percent
-        |> round
       distinct_scored_generation_records = distinct_scored_records_by_cortex_id(scored_generation_records, Map.new())
       sorted_records =
         case distinct_scored_generation_records do
           :did_not_perturb ->
-            scored_generation_records |> Enum.sort
+            scored_generation_records
+            |> Enum.sort
+            |> Enum.reverse
           distinct_scored_generation_records ->
             flatten_distinct_scores = fn {cortex_id, {score, neural_network}} ->
               {score, cortex_id, neural_network}
             end
             Enum.map(distinct_scored_generation_records, flatten_distinct_scores)
             |> Enum.sort
+            |> Enum.reverse
         end
+      number_of_records_to_keep =
+        Enum.count(sorted_records) * decimal_percent
+        |> round
       new_generation =
         Enum.take(sorted_records, number_of_records_to_keep)
         |> get_new_generation_from_scored_records

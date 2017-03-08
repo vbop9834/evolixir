@@ -2,6 +2,132 @@ defmodule Evolixir.HyperbolicTimeChamber do
   use ExUnit.Case
   doctest HyperbolicTimeChamber
 
+  test "hook_actuators_up_to_source should hook actuators into actuator function sources" do
+    cortex_id = :unique_cortex
+    actuator_function = :actuator_function
+    actuator_function_source = fn cortex_id_requesting_actuator_function ->
+      assert cortex_id_requesting_actuator_function == cortex_id
+      actuator_function
+    end
+    actuator_function_id = 1
+    actuator_sources = %{
+      actuator_function_id => actuator_function_source
+    }
+
+    actuator_id = :actuator
+    actuator = %Actuator{
+      actuator_id: actuator_id,
+      actuator_function: actuator_function_id
+    }
+    actuator_id_two = :actuator_two
+    actuator_two = %Actuator{
+      actuator_id: actuator_id_two,
+      actuator_function: actuator_function_id
+    }
+    actuators = %{
+      actuator_id => actuator,
+      actuator_id_two => actuator_two
+    }
+
+    updated_actuators = HyperbolicTimeChamber.hook_actuators_up_to_source(actuator_sources, cortex_id, actuators)
+
+    assert Map.has_key?(updated_actuators, actuator_id)
+    updated_actuator = Map.get(updated_actuators, actuator_id)
+    assert updated_actuator != actuator
+    assert updated_actuator.actuator_function == {actuator_function_id, actuator_function}
+
+    assert Map.has_key?(updated_actuators, actuator_id_two)
+    updated_actuator = Map.get(updated_actuators, actuator_id_two)
+    assert updated_actuator != actuator_two
+    assert updated_actuator.actuator_function == {actuator_function_id, actuator_function}
+  end
+
+  test "hook_actuators_up_to_source should hook actuators into actuator function sources even if the actuator already has a function" do
+    cortex_id = :unique_cortex
+    actuator_function = :actuator_function
+    actuator_function_source = fn cortex_id_requesting_actuator_function ->
+      assert cortex_id_requesting_actuator_function == cortex_id
+      actuator_function
+    end
+    actuator_function_id = 1
+    actuator_sources = %{
+      actuator_function_id => actuator_function_source
+    }
+
+    actuator_id = :actuator
+    actuator = %Actuator{
+      actuator_id: {actuator_id, actuator_function},
+      actuator_function: actuator_function_id
+    }
+    actuators = %{
+      actuator_id => actuator
+    }
+
+    updated_actuators = HyperbolicTimeChamber.hook_actuators_up_to_source(actuator_sources, cortex_id, actuators)
+    assert Map.has_key?(updated_actuators, actuator_id)
+    updated_actuator = Map.get(updated_actuators, actuator_id)
+    assert updated_actuator.actuator_function == {actuator_function_id, actuator_function}
+  end
+
+  test "hook_sensors_up_to_source should hook sensors into sync function sources" do
+    cortex_id = :cortex
+    sync_function_id = :sync_id
+    sync_function = :sync_function
+    sync_function_source = fn cortex_id_requesting_sync_function ->
+      assert cortex_id_requesting_sync_function == cortex_id
+      sync_function
+    end
+
+    sync_sources = %{
+      sync_function_id => sync_function_source
+    }
+
+    sensor_id = :sensor
+    sensor = %Sensor{
+      sensor_id: sensor_id,
+      sync_function: sync_function_id
+    }
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    updated_sensors = HyperbolicTimeChamber.hook_sensors_up_to_source(sync_sources, cortex_id, sensors)
+    assert Map.has_key?(updated_sensors, sensor_id)
+    updated_sensor = Map.get(updated_sensors, sensor_id)
+    assert updated_sensor != sensor
+    assert updated_sensor.sync_function == {sync_function_id, sync_function}
+  end
+
+  test "hook_sensors_up_to_source should hook sensors into sync function sources even if the sensor already has a function" do
+    cortex_id = :cortex
+    sync_function_id = :sync_id
+    sync_function = :sync_function
+    sync_function_source = fn cortex_id_requesting_sync_function ->
+      assert cortex_id_requesting_sync_function == cortex_id
+      sync_function
+    end
+
+    sync_sources = %{
+      sync_function_id => sync_function_source
+    }
+
+    sensor_id = :sensor
+    sensor = %Sensor{
+      sensor_id: sensor_id,
+      sync_function: {sync_function_id, sync_function}
+    }
+
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    updated_sensors = HyperbolicTimeChamber.hook_sensors_up_to_source(sync_sources, cortex_id, sensors)
+    assert Map.has_key?(updated_sensors, sensor_id)
+    updated_sensor = Map.get(updated_sensors, sensor_id)
+    assert updated_sensor.sync_function == {sync_function_id, sync_function}
+  end
+
   test "evolve should mutate a generation" do
     sensor = %Sensor{
       sensor_id: 1,

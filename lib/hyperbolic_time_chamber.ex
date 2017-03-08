@@ -48,7 +48,7 @@ defmodule HyperbolicTimeChamber do
     }}
   end
 
-  defp hook_sensors_up_to_source(sync_sources, cortex_id, sensors) do
+  def hook_sensors_up_to_source(sync_sources, cortex_id, sensors) do
     Enum.map(sensors, &hook_sensor_up_to_source(sync_sources, cortex_id, &1))
     |> Map.new
   end
@@ -60,7 +60,7 @@ defmodule HyperbolicTimeChamber do
                            }}
   end
 
-  defp hook_actuators_up_to_source(actuator_sources, cortex_id, actuators) do
+  def hook_actuators_up_to_source(actuator_sources, cortex_id, actuators) do
     Enum.map(actuators, &hook_actuator_up_to_source(actuator_sources, cortex_id, &1))
     |> Map.new
   end

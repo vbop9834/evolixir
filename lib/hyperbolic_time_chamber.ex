@@ -232,8 +232,8 @@ defmodule HyperbolicTimeChamber do
     end
   end
 
-  def think_and_act(chamber_pid) do
-    GenServer.call(chamber_pid, :think_and_act)
+  def think_and_act(chamber_pid, think_timeout) do
+    GenServer.call(chamber_pid, :think_and_act, think_timeout)
   end
 
   defp get_perturbed_networks([], _max_attempts_possible, perturbed_generation) do

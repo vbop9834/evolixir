@@ -615,7 +615,7 @@ defmodule Evolixir.HyperbolicTimeChamber do
     select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(50)
 
     end_of_generation_function = fn scored_generation_records ->
-      assert Enum.count(scored_generation_records) > 0
+      assert Enum.count(scored_generation_records) == 1
       {score, cortex_id, _neural_network} = hd scored_generation_records
       assert score > 0
       assert cortex_id == 1
@@ -640,26 +640,28 @@ defmodule Evolixir.HyperbolicTimeChamber do
 
     {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    Enum.each(Enum.to_list(1..100), fn _ ->
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
+      {true, output_value} = updated_test_state.was_activated
+      assert output_value != nil
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, new_output_value} = updated_test_state.was_activated
-    assert new_output_value != nil
+      {true, new_output_value} = updated_test_state.was_activated
+      assert new_output_value != nil
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, latest_output_value} = updated_test_state.was_activated
-    assert latest_output_value != nil
+      {true, latest_output_value} = updated_test_state.was_activated
+      assert latest_output_value != nil
+    end)
   end
 
 end

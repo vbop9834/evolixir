@@ -83,18 +83,18 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, [{_cortex_id, {sensors, neurons, actuators}} | remaining_generation], mutated_generation) do
-    mutation_properties = %MutationProperties{mutation_properties |
-      sensors: sensors,
-      neurons: neurons,
-      actuators: actuators
-    }
-    mutated_neural_network = Mutations.mutate_neural_network(possible_mutations, mutation_properties)
-    new_cortex_id = Enum.count(mutated_generation) + 1
-    updated_mutated_generation = Map.put(mutated_generation, new_cortex_id, mutated_neural_network)
-    case Enum.count(updated_mutated_generation) >= maximum_number_per_generation do
+    case Enum.count(mutated_generation) >= maximum_number_per_generation do
       true ->
-        {:generation_complete, updated_mutated_generation}
+        {:generation_complete, mutated_generation}
       false ->
+        mutation_properties = %MutationProperties{mutation_properties |
+                                                  sensors: sensors,
+                                                  neurons: neurons,
+                                                  actuators: actuators
+                                                 }
+        mutated_neural_network = Mutations.mutate_neural_network(possible_mutations, mutation_properties)
+        new_cortex_id = Enum.count(mutated_generation) + 1
+        updated_mutated_generation = Map.put(mutated_generation, new_cortex_id, mutated_neural_network)
         process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, remaining_generation, updated_mutated_generation)
     end
   end

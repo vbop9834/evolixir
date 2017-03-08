@@ -349,26 +349,14 @@ defmodule Evolixir.HyperbolicTimeChamber do
 
     {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    Enum.each(Enum.to_list(1..100), fn _ ->
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, new_output_value} = updated_test_state.was_activated
-    assert new_output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, latest_output_value} = updated_test_state.was_activated
-    assert latest_output_value != nil
+      {true, output_value} = updated_test_state.was_activated
+      assert output_value != nil
+    end)
   end
 
   test "HyperbolicTimeChamber process should continue to process think cycles with continue_think_cycle in the fitness function" do
@@ -459,19 +447,14 @@ defmodule Evolixir.HyperbolicTimeChamber do
 
     {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    Enum.each(Enum.to_list(1..100), fn _ ->
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
+      {true, output_value} = updated_test_state.was_activated
+      assert output_value != nil
+    end)
   end
 
   test "HyperbolicTimeChamber process should allow perturbing weights in topologies" do
@@ -565,33 +548,14 @@ defmodule Evolixir.HyperbolicTimeChamber do
 
     {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
 
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
+    Enum.each(Enum.to_list(1..100), fn _ ->
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
 
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
-
-    :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-    :timer.sleep(5)
-    updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-    {true, output_value} = updated_test_state.was_activated
-    assert output_value != nil
+      {true, output_value} = updated_test_state.was_activated
+      assert output_value != nil
+    end)
   end
 
   test "HyperbolicTimeChamber process should have an end_of_generation_function" do
@@ -697,20 +661,6 @@ defmodule Evolixir.HyperbolicTimeChamber do
 
       {true, output_value} = updated_test_state.was_activated
       assert output_value != nil
-
-      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-      :timer.sleep(5)
-      updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-      {true, new_output_value} = updated_test_state.was_activated
-      assert new_output_value != nil
-
-      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid)
-      :timer.sleep(5)
-      updated_test_state = GenServer.call(test_helper_pid, :get_state)
-
-      {true, latest_output_value} = updated_test_state.was_activated
-      assert latest_output_value != nil
     end)
   end
 

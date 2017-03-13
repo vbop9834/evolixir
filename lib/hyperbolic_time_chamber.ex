@@ -9,6 +9,7 @@ defmodule HyperbolicTimeChamberState do
 end
 defmodule HyperbolicTimeChamber do
   use GenServer
+  require Logger
   defstruct fitness_function: nil,
     select_fit_population_function: nil,
     starting_generation_records: Map.new(),
@@ -49,6 +50,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   def hook_sensors_up_to_source(sync_sources, cortex_id, sensors) do
+    Logger.info "Hooking sensors into sources"
     Enum.map(sensors, &hook_sensor_up_to_source(sync_sources, cortex_id, &1))
     |> Map.new
   end
@@ -61,11 +63,13 @@ defmodule HyperbolicTimeChamber do
   end
 
   def hook_actuators_up_to_source(actuator_sources, cortex_id, actuators) do
+    Logger.info "Hooking actuators into sources"
     Enum.map(actuators, &hook_actuator_up_to_source(actuator_sources, cortex_id, &1))
     |> Map.new
   end
 
   defp create_brain(registry_name, sync_sources, actuator_sources, {cortex_id, {sensors, neurons, actuators}}) do
+    Logger.info "Starting brain creation"
     sensors = hook_sensors_up_to_source(sync_sources, cortex_id, sensors)
     actuators = hook_actuators_up_to_source(actuator_sources, cortex_id, actuators)
     {:ok, _cortex_pid} = Cortex.start_link(registry_name, cortex_id, sensors, neurons, actuators)
@@ -76,6 +80,7 @@ defmodule HyperbolicTimeChamber do
   defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
     case Enum.count(mutated_generation) >= maximum_number_per_generation do
       true ->
+        Logger.info "Generation limit reached"
         {:generation_complete, mutated_generation}
       false ->
         {:generation_incomplete, mutated_generation}
@@ -85,6 +90,7 @@ defmodule HyperbolicTimeChamber do
   defp process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, [{_cortex_id, {sensors, neurons, actuators}} | remaining_generation], mutated_generation) do
     case Enum.count(mutated_generation) >= maximum_number_per_generation do
       true ->
+        Logger.info "Generation limit reached"
         {:generation_complete, mutated_generation}
       false ->
         mutation_properties = %MutationProperties{mutation_properties |
@@ -100,15 +106,18 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp evolve_generation(_maximum_number_per_generation, _mutation_properties, _possible_mutations, _generation, {:generation_complete, mutated_generation}) do
+    Logger.info "Generation evolution complete"
     mutated_generation
   end
 
   defp evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, {:generation_incomplete, mutated_generation}) do
+    Logger.info "Generation evolution incomplete. Reiterating and mutating"
     updated_mutated_generation = process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, generation, mutated_generation)
     evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, updated_mutated_generation)
   end
 
   defp evolve_generation(maximum_number_per_generation, activation_functions, sync_sources, actuator_sources, possible_mutations, generation) do
+    Logger.info "Starting generation evolution"
     sync_functions = Map.keys(sync_sources)
     actuator_functions = Map.keys(actuator_sources)
     mutation_properties = %MutationProperties{
@@ -127,6 +136,7 @@ defmodule HyperbolicTimeChamber do
         possible_mutations: possible_mutations,
         select_fit_population_function: select_fit_population_function
              }, scored_generation_records) do
+    Logger.info "Selecting fit population"
     fit_generation = select_fit_population_function.(scored_generation_records)
     new_generation = evolve_generation(minds_per_generation, activation_functions, sync_sources, actuator_sources, possible_mutations, fit_generation)
     new_generation
@@ -152,6 +162,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp distinct_scored_records_by_cortex_id([], distinct_records) do
+    Logger.info "Filtering perturbed records by highest score complete"
     distinct_records
   end
 
@@ -172,6 +183,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp distinct_scored_records_by_cortex_id(_scored_records, _distinct_records) do
+    Logger.info "Scored records were not perturbed"
     :did_not_perturb
   end
 
@@ -222,12 +234,15 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp get_new_active_cortex(sync_sources, actuator_sources, registry_name, {:did_perturb, [{new_cortex_id, neural_networks} | remaining_generation]}) do
+    Logger.info "Acquiring new active cortex"
     case get_new_active_cortex_from_perturbed_networks(neural_networks) do
       :perturb_is_complete ->
+        Logger.info "Perturbing is completed for cortex"
         get_new_active_cortex(sync_sources, actuator_sources, registry_name, {:did_perturb, remaining_generation})
-      {perturb_id, neural_network, remaining_networks} ->
+      {perturb_id, neural_network, remaining_perturbed_networks} ->
+        Logger.info "Perturbing is incomplete. Creating perturbed network variant"
         :ok = create_brain(registry_name, sync_sources, actuator_sources, {{new_cortex_id, perturb_id}, neural_network})
-        remaining_generation = [{new_cortex_id, remaining_networks}] ++ remaining_generation
+        remaining_generation = [{new_cortex_id, remaining_perturbed_networks}] ++ remaining_generation
         {{new_cortex_id, perturb_id}, neural_network, {:did_perturb, remaining_generation}}
     end
   end
@@ -250,14 +265,17 @@ defmodule HyperbolicTimeChamber do
   defp get_perturbed_networks(hyperbolic_time_chamber_properties, generation) do
     case hyperbolic_time_chamber_properties.max_attempts_to_perturb do
       nil ->
+        Logger.info "Max_attempts_to_perturb is set to nil. skipping perturb"
         {:did_not_perturb, generation}
       max_attempts_possible ->
+        Logger.info "Perturbing generation"
         perturbed_generation = get_perturbed_networks(generation, max_attempts_possible, Map.new())
         {:did_perturb, perturbed_generation}
       end
   end
 
   defp process_fitness_function_result({:end_think_cycle, score}, state) do
+    Logger.info "Think cycle finished. Scoring and killing active cortex"
     final_score = Enum.sum(state.active_cortex_scores) + score
     Cortex.kill_cortex(state.chamber_registry_name, state.active_cortex_id)
 
@@ -271,6 +289,7 @@ defmodule HyperbolicTimeChamber do
         {new_cortex_id, cortex_records, remaining_generation} ->
           {new_cortex_id, cortex_records, updated_scored_generation_records, remaining_generation}
         :generation_is_complete ->
+          Logger.info "Generation is complete. Mutating new generation"
           #TODO review this to list operation
           case state.hyperbolic_time_chamber_properties.end_of_generation_function do
             nil -> ()
@@ -296,6 +315,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp process_fitness_function_result({:continue_think_cycle, score}, state) do
+    Logger.info "Continuing think cycle. Adding score to active cortex"
     updated_active_cortex_scores =
       state.active_cortex_scores ++ [score]
     %HyperbolicTimeChamberState{state |
@@ -304,12 +324,15 @@ defmodule HyperbolicTimeChamber do
   end
 
   def process_think_and_act(state) do
+    Logger.info "Sending think message to active cortex"
     Cortex.think(state.chamber_registry_name, state.active_cortex_id)
+    Logger.info "Sending active cortex through fitness function"
     fitness_function_result = state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id)
     process_fitness_function_result(fitness_function_result, state)
   end
 
   def start_link(chamber_name, hyperbolic_time_chamber_properties) do
+    Logger.info "Starting chamber registry"
     {:ok, _registry_pid} = Registry.start_link(:unique, chamber_name)
     perturbed_generation = get_perturbed_networks(hyperbolic_time_chamber_properties, Map.to_list(hyperbolic_time_chamber_properties.starting_generation_records))
     {new_cortex_id, cortex_records, remaining_generation} =
@@ -325,6 +348,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   def handle_call(:think_and_act, _from,  state) do
+    Logger.info "Chamber received think and act message"
     updated_state =
       process_think_and_act(state)
     {:reply, :ok, updated_state}

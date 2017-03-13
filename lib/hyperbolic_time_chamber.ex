@@ -78,11 +78,13 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
+    Logger.info "Current generation enumerated"
     case Enum.count(mutated_generation) >= maximum_number_per_generation do
       true ->
         Logger.info "Generation limit reached"
         {:generation_complete, mutated_generation}
       false ->
+        Logger.info "Generation evolution is incomplete. Enumerating over current generation again"
         {:generation_incomplete, mutated_generation}
     end
   end
@@ -90,9 +92,10 @@ defmodule HyperbolicTimeChamber do
   defp process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, [{_cortex_id, {sensors, neurons, actuators}} | remaining_generation], mutated_generation) do
     case Enum.count(mutated_generation) >= maximum_number_per_generation do
       true ->
-        Logger.info "Generation limit reached"
+        Logger.info "Generation limit reached. Ending enumeration"
         {:generation_complete, mutated_generation}
       false ->
+        Logger.info "Generation evolution is incomplete."
         mutation_properties = %MutationProperties{mutation_properties |
                                                   sensors: sensors,
                                                   neurons: neurons,

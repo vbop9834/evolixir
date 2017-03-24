@@ -101,7 +101,7 @@ defmodule Evolixir.NeuralNodeTest do
     empty_inbound_connections = Map.new()
     from_node_pid = 5
     weight = 2.3
-    {inbound_connections_with_new_inbound, new_connection_id} = NeuralNode.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
+    {:ok, {inbound_connections_with_new_inbound, new_connection_id}} = NeuralNode.add_inbound_connection(empty_inbound_connections, from_node_pid, weight)
 
     connections_from_node_pid = Map.get(inbound_connections_with_new_inbound, from_node_pid)
 

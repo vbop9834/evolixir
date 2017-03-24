@@ -79,7 +79,9 @@ defmodule HyperbolicTimeChamber do
 
   defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
     Logger.info "Current generation enumerated"
-    case Enum.count(mutated_generation) >= maximum_number_per_generation do
+    count_of_mutated_generation = Enum.count(mutated_generation)
+    Logger.debug fn -> "Mutated Generation count is #{inspect count_of_mutated_generation}" end
+    case count_of_mutated_generation >= maximum_number_per_generation do
       true ->
         Logger.info "Generation limit reached"
         {:generation_complete, mutated_generation}
@@ -90,7 +92,9 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, [{_cortex_id, {sensors, neurons, actuators}} | remaining_generation], mutated_generation) do
-    case Enum.count(mutated_generation) >= maximum_number_per_generation do
+    count_of_mutated_generation = Enum.count(mutated_generation)
+    Logger.debug fn -> "Mutated Generation count is #{inspect count_of_mutated_generation}" end
+    case count_of_mutated_generation >= maximum_number_per_generation do
       true ->
         Logger.info "Generation limit reached. Ending enumeration"
         {:generation_complete, mutated_generation}
@@ -101,7 +105,7 @@ defmodule HyperbolicTimeChamber do
                                                   neurons: neurons,
                                                   actuators: actuators
                                                  }
-        mutated_neural_network = Mutations.mutate_neural_network(possible_mutations, mutation_properties)
+        {:ok, mutated_neural_network} = Mutations.mutate_neural_network(possible_mutations, mutation_properties)
         new_cortex_id = Enum.count(mutated_generation) + 1
         updated_mutated_generation = Map.put(mutated_generation, new_cortex_id, mutated_neural_network)
         process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, remaining_generation, updated_mutated_generation)
@@ -114,7 +118,7 @@ defmodule HyperbolicTimeChamber do
   end
 
   defp evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, {:generation_incomplete, mutated_generation}) do
-    Logger.info "Generation evolution incomplete. Reiterating and mutating"
+    Logger.info "Generation evolution incomplete. Iterating and mutating"
     updated_mutated_generation = process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, generation, mutated_generation)
     evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, updated_mutated_generation)
   end
@@ -128,7 +132,7 @@ defmodule HyperbolicTimeChamber do
       sync_functions: sync_functions,
       actuator_functions: actuator_functions
     }
-    evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, Map.to_list(generation), {:generation_incomplete, generation})
+    evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, Map.to_list(generation), {:generation_incomplete, Map.new()})
   end
 
   def evolve(%HyperbolicTimeChamber{
@@ -243,7 +247,7 @@ defmodule HyperbolicTimeChamber do
         Logger.info "Perturbing is completed for cortex"
         get_new_active_cortex(sync_sources, actuator_sources, registry_name, {:did_perturb, remaining_generation})
       {perturb_id, neural_network, remaining_perturbed_networks} ->
-        Logger.info "Perturbing is incomplete. Creating perturbed network variant"
+        Logger.info "Perturbing is incomplete. Creating network variant"
         :ok = create_brain(registry_name, sync_sources, actuator_sources, {{new_cortex_id, perturb_id}, neural_network})
         remaining_generation = [{new_cortex_id, remaining_perturbed_networks}] ++ remaining_generation
         {{new_cortex_id, perturb_id}, neural_network, {:did_perturb, remaining_generation}}

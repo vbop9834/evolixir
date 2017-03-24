@@ -21,37 +21,38 @@ defmodule Evolixir.StochasticHillClimberTest do
       actuator_id: actuator_id
     }
 
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-    {sensor, neuron} = Sensor.connect_to_neuron(sensor, neuron, 5.0)
-
-    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
-    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
-    {sensor, neuron_two} = Sensor.connect_to_neuron(sensor, neuron_two, 5.0)
-
-    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
-    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
-    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
-    {neuron, neuron_two} = Neuron.connect_neurons(neuron, neuron_two, 10.0)
-
-    {neuron, actuator} = Neuron.connect_to_actuator(neuron, actuator)
-
     sensors = %{
       sensor_id => sensor
     }
     neuron_layer = 1
     neurons = %{
       neuron_layer => %{
-        neuron_id => neuron,
-        neuron_id_two => neuron_two
-      }
+    neuron_id => neuron,
+    neuron_id_two => neuron_two
+  }
     }
     actuators = %{
       actuator_id => actuator
     }
+
+    weight = 5.0
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id_two, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id_two, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id_two, weight)
+
+    weight = 10.0
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id_two, weight)
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id_two, weight)
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id_two, weight)
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id_two, weight)
+
+    {:ok, {neurons, actuators}} = Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
 
     neural_network = {sensors, neurons, actuators}
     max_attempts_possible = 10

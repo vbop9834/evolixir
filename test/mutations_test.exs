@@ -25,7 +25,7 @@ defmodule Evolixir.MutationsTest do
       activation_functions: %{ desired_activation_function_id => desired_activation_function }
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -59,7 +59,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -70,30 +70,6 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct.bias != neuron.bias
     assert mutated_neuron_struct.bias >= 0.0
     assert mutated_neuron_struct.bias <= 1.0
-  end
-
-  test ":add_bias should not change the bias of a random neuron if that neuron has a bias and should return a mutation_did_not_occur" do
-    neuron_layer = 3
-    neuron_id = 8
-    neuron = %Neuron{
-      neuron_id: neuron_id,
-      bias: 3.5
-    }
-    neurons = %{
-      neuron_layer => %{
-    neuron.neuron_id => neuron
-  }
-    }
-
-    mutation = :add_bias
-    mutation_properties = %MutationProperties{
-      neurons: neurons,
-      mutation: mutation
-    }
-
-    mutation_result = Mutations.mutate(mutation_properties)
-
-    assert mutation_result == :mutation_did_not_occur
   end
 
   test ":remove_bias should remove a bias from a random neuron if that neuron has a bias" do
@@ -115,7 +91,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -126,36 +102,12 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct.bias == nil
   end
 
-  test ":remove_bias should return a mutation_did_not_occur if a random neuron already doesn't have a bias" do
-    neuron_layer = 3
-    neuron_id = 7
-    neuron = %Neuron{
-      neuron_id: neuron_id,
-      bias: nil
-    }
-    neurons = %{
-      neuron_layer => %{
-    neuron.neuron_id => neuron
-  }
-    }
-
-    mutation = :remove_bias
-    mutation_properties = %MutationProperties{
-      neurons: neurons,
-      mutation: mutation
-    }
-
-    mutation_result = Mutations.mutate(mutation_properties)
-
-    assert mutation_result == :mutation_did_not_occur
-  end
-
   test ":mutate_weights should randomly mutate weights from a random inbound connection" do
     fake_from_node_id = :node
-    old_weight = 8.0
+    old_weight = 10000.0
     neuron_layer = 2
     neuron_id = 9
-    {inbound_connections, inbound_connection_id} =
+    {:ok, {inbound_connections, inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, old_weight)
     neuron = %Neuron{
       neuron_id: neuron_id,
@@ -174,7 +126,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -196,7 +148,7 @@ defmodule Evolixir.MutationsTest do
     old_weight = 8.0
     neuron_layer = 2
     neuron_id = 9
-    {inbound_connections, inbound_connection_id} =
+    {:ok, {inbound_connections, inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, old_weight)
     neuron = %Neuron{
       neuron_id: neuron_id,
@@ -215,7 +167,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -251,7 +203,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -296,7 +248,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
 
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
@@ -305,21 +257,16 @@ defmodule Evolixir.MutationsTest do
     mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
     mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
 
+    assert Map.has_key?(mutated_neuron_struct.outbound_connections, {neuron_id, 1})
+
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
-    assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
-
-    mutated_outbound_connections = Map.keys(mutated_neuron_struct.outbound_connections)
-   {outbound_neuron_id, mutated_connection_id} =
-     hd mutated_outbound_connections
-   assert outbound_neuron_id == neuron_id
-
-   mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, neuron_id)
-   assert Enum.count(mutated_inbound_connections_from_node) == 1
-   mutated_weight = Map.get(mutated_inbound_connections_from_node, mutated_connection_id)
-   min_weight_possible = -1.0 * (:math.pi / 2.0)
-   max_weight_possible = :math.pi / 2.0
-   assert mutated_weight > min_weight_possible
-   assert mutated_weight <= max_weight_possible
+    mutated_inbound_connections_from_node = Map.get(mutated_neuron_struct.inbound_connections, neuron_id)
+    assert Enum.count(mutated_inbound_connections_from_node) == 1
+    mutated_weight = Map.get(mutated_inbound_connections_from_node, 1)
+    min_weight_possible = -1.0 * (:math.pi / 2.0)
+    max_weight_possible = :math.pi / 2.0
+    assert mutated_weight > min_weight_possible
+    assert mutated_weight <= max_weight_possible
   end
 
   test ":add_neuron should add a neuron in a known layer, connecting it from and to two random neurons" do
@@ -340,7 +287,8 @@ defmodule Evolixir.MutationsTest do
     activation_functions = %{
       activation_function_id => :activation_function
     }
-    get_node_id = fn -> neuron_id + 1 end
+    new_neuron_id = neuron_id + 1
+    get_node_id = fn -> new_neuron_id end
     mutation_properties = %MutationProperties{
       neurons: neurons,
       mutation: mutation,
@@ -348,7 +296,7 @@ defmodule Evolixir.MutationsTest do
       get_node_id: get_node_id
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_sensors == mutation_properties.sensors
     assert mutated_actuators == mutation_properties.actuators
     assert Enum.count(mutated_neurons) == 1
@@ -361,11 +309,15 @@ defmodule Evolixir.MutationsTest do
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
 
-    new_neuron_id = neuron_id + 1
     new_neuron_struct = Map.get(mutated_neuron_structs, new_neuron_id)
     assert new_neuron_struct != nil
 
     assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    {from_node_id, inbound_connections_from_node} = Enum.to_list(new_neuron_struct.inbound_connections) |> hd
+    assert from_node_id != nil
+    assert Enum.count(inbound_connections_from_node) == 1
+    new_weight = Enum.to_list(inbound_connections_from_node) |> hd
+    assert new_weight != nil
     assert Enum.count(new_neuron_struct.outbound_connections) == 1
     assert new_neuron_struct.bias == nil
     activation_function = Map.get(activation_functions, activation_function_id)
@@ -376,13 +328,8 @@ defmodule Evolixir.MutationsTest do
     fake_actuator_id = 2
     neuron_id = 9
     neuron_layer = 5
-    {inbound_connections, connection_id} =
-      NeuralNode.add_inbound_connection(neuron_id, 0.0)
-    outbound_connections =
-      Neuron.add_outbound_connection(fake_actuator_id, connection_id)
     neuron = %Neuron{
-      neuron_id: neuron_id,
-      outbound_connections: outbound_connections
+      neuron_id: neuron_id
     }
 
     neurons = %{
@@ -392,12 +339,12 @@ defmodule Evolixir.MutationsTest do
     }
 
     actuator = %Actuator{
-      actuator_id: fake_actuator_id,
-      inbound_connections: inbound_connections
+      actuator_id: fake_actuator_id
     }
     actuators = %{
       fake_actuator_id => actuator
     }
+    {:ok, {neurons, actuators}} = Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, fake_actuator_id)
 
     mutation = :add_neuron_outsplice
     activation_function_id = :first
@@ -414,7 +361,7 @@ defmodule Evolixir.MutationsTest do
       get_node_id: get_node_id
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_sensors == mutation_properties.sensors
     assert Enum.count(mutated_actuators) == 1
     assert mutated_actuators != mutation_properties.actuators
@@ -427,6 +374,7 @@ defmodule Evolixir.MutationsTest do
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
+    assert Map.has_key?(mutated_neuron_struct.outbound_connections, {new_neuron_id, 1})
 
     new_layer_number = neuron_layer + 1
     new_layer = Map.get(mutated_neurons, new_layer_number)
@@ -434,6 +382,11 @@ defmodule Evolixir.MutationsTest do
     assert new_neuron_struct != nil
 
     assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    connections_from_neuron = Map.get(new_neuron_struct.inbound_connections, neuron_id)
+    assert Enum.count(connections_from_neuron) == 1
+    connection_id = 1
+    new_weight = Map.get(connections_from_neuron, connection_id)
+    assert new_weight != nil
     assert Enum.count(new_neuron_struct.outbound_connections) == 1
     assert Map.has_key?(new_neuron_struct.outbound_connections, {fake_actuator_id, 1}) == true
     assert new_neuron_struct.bias == nil
@@ -453,9 +406,6 @@ defmodule Evolixir.MutationsTest do
       sensor_id: sensor_id
     }
 
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
     neurons = %{
       neuron_layer => %{
         neuron_id => neuron
@@ -465,6 +415,8 @@ defmodule Evolixir.MutationsTest do
     sensors = %{
       sensor_id => sensor
     }
+
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, 0.0)
 
     mutation = :add_neuron_insplice
     activation_function_id = :first
@@ -481,7 +433,7 @@ defmodule Evolixir.MutationsTest do
       get_node_id: get_node_id
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_actuators == mutation_properties.actuators
     assert Enum.count(mutated_sensors) == 1
     assert mutated_sensors != mutation_properties.sensors
@@ -493,6 +445,10 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct != nil
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    connections_from_new_neuron = Map.get(mutated_neuron_struct.inbound_connections, new_neuron_id)
+    assert Enum.count(connections_from_new_neuron) == 1
+    new_weight = Map.get(connections_from_new_neuron, 1)
+    assert new_weight != nil
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
 
     new_layer_number = neuron_layer/2
@@ -501,12 +457,20 @@ defmodule Evolixir.MutationsTest do
     assert new_neuron_struct != nil
 
     assert Enum.count(new_neuron_struct.inbound_connections) == 1
+    connections_from_sensor = Map.get(new_neuron_struct.inbound_connections, sensor_id)
+    assert Enum.count(connections_from_sensor) == 1
+    new_weight = Map.get(connections_from_sensor, 1)
+    assert new_weight != nil
     assert Enum.count(new_neuron_struct.outbound_connections) == 1
-    assert Map.has_key?(new_neuron_struct.inbound_connections, sensor_id) == true
     assert new_neuron_struct.bias == nil
     activation_function = Map.get(activation_functions, activation_function_id)
     assert new_neuron_struct.activation_function == {activation_function_id, activation_function}
 
+    mutated_sensor = Map.get(mutated_sensors, sensor_id)
+    assert Enum.count(mutated_sensor.outbound_connections) == 1
+    {to_node_id, connection_id} = hd mutated_sensor.outbound_connections
+    assert to_node_id == new_neuron_id
+    assert connection_id == 1
   end
 
   test ":add_sensor_link should connect a random sensor to a random neuron" do
@@ -538,7 +502,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_actuators == mutation_properties.actuators
     assert Enum.count(mutated_sensors) == 1
     assert mutated_sensors != mutation_properties.sensors
@@ -547,6 +511,9 @@ defmodule Evolixir.MutationsTest do
     mutated_sensor = Map.get(mutated_sensors, sensor_id)
     assert mutated_sensor != sensor
     assert Enum.count(mutated_sensor.outbound_connections) == 1
+    {to_node_id, connection_id} = hd mutated_sensor.outbound_connections
+    assert to_node_id == neuron_id
+    assert connection_id == 1
 
     mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
     assert Enum.count(mutated_neuron_structs) == 1
@@ -554,8 +521,11 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct != nil
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    connections_from_sensor = Map.get(mutated_neuron_struct.inbound_connections, sensor_id)
+    assert Enum.count(connections_from_sensor) == 1
+    new_weight = Map.get(connections_from_sensor, 1)
+    assert new_weight != nil
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
-
   end
 
   test ":add_sensor_link should not connect a sensor to a random neuron if the sensor had more outbound connections than maximum_vector_size" do
@@ -587,8 +557,8 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    mutation_result = Mutations.mutate(mutation_properties)
-    assert mutation_result == :mutation_did_not_occur
+    {mutation_result, _reason} = Mutations.mutate(mutation_properties)
+    assert mutation_result == :error
 
   end
 
@@ -620,7 +590,7 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok,{mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert Enum.count(mutated_actuators) == 1
     assert mutated_actuators != mutation_properties.actuators
     assert mutated_sensors == mutation_properties.sensors
@@ -629,6 +599,9 @@ defmodule Evolixir.MutationsTest do
     mutated_actuator = Map.get(mutated_actuators, actuator_id)
     assert mutated_actuator != actuator
     assert Enum.count(mutated_actuator.inbound_connections) == 1
+    connections_from_neuron = Map.get(mutated_actuator.inbound_connections, neuron_id)
+    assert Enum.count(connections_from_neuron) == 1
+    assert Map.has_key?(connections_from_neuron, 1) == true
 
     mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
     assert Enum.count(mutated_neuron_structs) == 1
@@ -637,7 +610,7 @@ defmodule Evolixir.MutationsTest do
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
-
+    assert Map.has_key?(mutated_neuron_struct.outbound_connections, {actuator_id, 1})
   end
 
   test ":add_sensor should add a new sensor if a sync function is available" do
@@ -676,7 +649,7 @@ defmodule Evolixir.MutationsTest do
       get_node_id: get_node_id
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_actuators == mutation_properties.actuators
     assert Enum.count(mutated_sensors) == 2
     assert mutated_sensors != mutation_properties.sensors
@@ -684,6 +657,9 @@ defmodule Evolixir.MutationsTest do
 
     mutated_sensor = Map.get(mutated_sensors, new_sensor_id)
     assert Enum.count(mutated_sensor.outbound_connections) == 1
+    {to_neuron_id, connection_id} = hd mutated_sensor.outbound_connections
+    assert to_neuron_id == neuron_id
+    assert connection_id == 1
     assert mutated_sensor.sync_function == sync_function_id
     assert mutated_sensor.sensor_id == new_sensor_id
 
@@ -693,8 +669,11 @@ defmodule Evolixir.MutationsTest do
     assert mutated_neuron_struct != nil
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 1
+    connections_from_sensor = Map.get(mutated_neuron_struct.inbound_connections, new_sensor_id)
+    assert Enum.count(connections_from_sensor) == 1
+    new_weight = Map.get(connections_from_sensor, 1)
+    assert new_weight != nil
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 0
-
   end
 
   test ":add_sensor should not add a new sensor if all sync functions are used" do
@@ -728,9 +707,8 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    mutation_result = Mutations.mutate(mutation_properties)
-    assert mutation_result == :mutation_did_not_occur
-
+    {mutation_result, _reason} = Mutations.mutate(mutation_properties)
+    assert mutation_result == :error
   end
 
   test ":add_actuator should add a new actuator if an actuator function is available" do
@@ -769,7 +747,7 @@ defmodule Evolixir.MutationsTest do
       get_node_id: get_node_id
     }
 
-    {mutated_sensors, mutated_neurons, mutated_actuators} = Mutations.mutate(mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
     assert mutated_actuators != mutation_properties.actuators
     assert Enum.count(mutated_actuators) == 2
     assert mutated_sensors == mutation_properties.sensors
@@ -777,6 +755,8 @@ defmodule Evolixir.MutationsTest do
 
     mutated_actuator = Map.get(mutated_actuators, new_actuator_id)
     assert Enum.count(mutated_actuator.inbound_connections) == 1
+    connections_from_neuron = Map.get(mutated_actuator.inbound_connections, neuron_id)
+    assert Map.has_key?(connections_from_neuron, 1)
     assert mutated_actuator.actuator_function == actuator_function_id
     assert mutated_actuator.actuator_id == new_actuator_id
 
@@ -787,7 +767,7 @@ defmodule Evolixir.MutationsTest do
 
     assert Enum.count(mutated_neuron_struct.inbound_connections) == 0
     assert Enum.count(mutated_neuron_struct.outbound_connections) == 1
-
+    assert Map.has_key?(mutated_neuron_struct.outbound_connections, {new_actuator_id, 1})
   end
 
   test ":add_actuator should not add a new actuator if all actuator functions are used" do
@@ -821,8 +801,8 @@ defmodule Evolixir.MutationsTest do
       mutation: mutation
     }
 
-    mutation_result = Mutations.mutate(mutation_properties)
-    assert mutation_result == :mutation_did_not_occur
+    {mutation_result, _reason} = Mutations.mutate(mutation_properties)
+    assert mutation_result == :error
   end
 
   test "mutate_neural_network should mutate a neural network randomly" do
@@ -850,11 +830,6 @@ defmodule Evolixir.MutationsTest do
       actuator_function: used_actuator_function_id
     }
 
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
-
     sensors = %{
       sensor_id => sensor
     }
@@ -868,6 +843,9 @@ defmodule Evolixir.MutationsTest do
     actuators = %{
       actuator_id => actuator
     }
+
+    {:ok,{sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, 0.0)
+    {:ok,{neurons, actuators}} = Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
 
     sync_function_id = :sync
     sync_function = {sync_function_id, nil}
@@ -891,11 +869,39 @@ defmodule Evolixir.MutationsTest do
     }
 
     mutations = Mutations.default_mutation_sequence
-    mutated_neural_network = Mutations.mutate_neural_network(mutations, mutation_properties)
+    {:ok, {mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate_neural_network(mutations, mutation_properties)
 
+    assert Enum.count(mutated_sensors) > 0
+    assert Enum.count(mutated_neurons) > 0
+    assert Enum.count(mutated_actuators) > 0
 
-    neural_network = {sensor, neurons, actuators}
-    assert mutated_neural_network != neural_network
+    test_sensor = fn {sensor_id, sensor} ->
+      assert sensor.sensor_id > 0
+      assert sensor_id == sensor.sensor_id
+      assert Enum.count(sensor.outbound_connections) > 0
+      assert sensor.maximum_vector_size != nil
+      assert sensor.sync_function != nil
+    end
+    test_neuron_layer = fn {neuron_layer, neuron_structs} ->
+      assert neuron_layer > 0
+      test_neuron = fn {neuron_id, neuron} ->
+        assert neuron.neuron_id > 0
+        assert neuron_id == neuron.neuron_id
+        assert Enum.count(neuron.inbound_connections) > 0
+        assert Enum.count(neuron.outbound_connections) > 0
+      end
+      Enum.each(neuron_structs, test_neuron)
+    end
+    test_actuator = fn {actuator_id, actuator} ->
+      assert actuator.actuator_id > 0
+      assert actuator_id == actuator.actuator_id
+      assert Enum.count(actuator.inbound_connections) > 0
+      assert actuator.actuator_function != nil
+    end
+
+    Enum.each(mutated_sensors, test_sensor)
+    Enum.each(mutated_neurons, test_neuron_layer)
+    Enum.each(mutated_actuators, test_actuator)
   end
 
 end

@@ -179,33 +179,38 @@ defmodule Evolixir.HyperbolicTimeChamber do
   end
 
   test "evolve should mutate a generation" do
+    sensor_id = 1
     sensor = %Sensor{
-      sensor_id: 1,
+      sensor_id: sensor_id
     }
 
+    neuron_id = 2
     neuron = %Neuron{
-      neuron_id: 2
+      neuron_id: neuron_id
     }
+    actuator_id = 3
     actuator = %Actuator{
-      actuator_id: 3
+      actuator_id: actuator_id
     }
-
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
 
     sensors = %{
-      sensor.sensor_id => sensor
+      sensor_id => sensor
     }
     neuron_layer = 1
     neurons = %{
-      neuron_layer => %{ neuron.neuron_id => neuron }
+      neuron_layer => %{ neuron_id => neuron }
     }
     actuators = %{
-      actuator.actuator_id => actuator
+      actuator_id => actuator
     }
+
+    weight = 0.0
+    {:ok, {sensors, neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     scored_records = [
@@ -289,36 +294,41 @@ defmodule Evolixir.HyperbolicTimeChamber do
     activation_functions = %{
       activation_function_id => activation_function
     }
+    sensor_id = 1
     sensor = %Sensor{
-      sensor_id: 1,
+      sensor_id: sensor_id,
       sync_function: sync_function_id
     }
 
+    neuron_id = 2
     neuron = %Neuron{
-      neuron_id: 2,
+      neuron_id: neuron_id,
       activation_function: {activation_function_id, activation_function}
     }
+    actuator_id = 3
     actuator = %Actuator{
-      actuator_id: 3,
+      actuator_id: actuator_id,
       actuator_function: actuator_function_id
     }
 
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
-
     sensors = %{
-      sensor.sensor_id => sensor
+      sensor_id => sensor
     }
     neuron_layer = 1
     neurons = %{
-      neuron_layer => %{ neuron.neuron_id => neuron }
+      neuron_layer => %{ neuron_id => neuron }
     }
     actuators = %{
-      actuator.actuator_id => actuator
+      actuator_id => actuator
     }
+
+    weight = 0.0
+    {:ok, {sensors,neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     starting_records = %{
@@ -326,8 +336,24 @@ defmodule Evolixir.HyperbolicTimeChamber do
     }
 
     chamber_name = :test_chamber
-    minds_per_generation = 1
-    possible_mutations = Mutations.default_mutation_sequence
+    minds_per_generation = 5
+    possible_mutations =
+      [
+        :add_bias,
+        :remove_bias,
+        :mutate_activation_function,
+        :mutate_weights,
+        :reset_weights,
+        :add_inbound_connection,
+        :add_outbound_connection,
+        :add_sensor,
+        :add_neuron,
+        :add_neuron_outsplice,
+        :add_neuron_insplice,
+        :add_actuator,
+        :add_sensor_link,
+        :add_actuator_link
+      ]
 
     select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(50)
 
@@ -388,25 +414,22 @@ defmodule Evolixir.HyperbolicTimeChamber do
     activation_functions = %{
       activation_function_id => activation_function
     }
+    sensor_id = 1
     sensor = %Sensor{
-      sensor_id: 1,
+      sensor_id: sensor_id,
       sync_function: sync_function_id
     }
 
+    neuron_id = 2
     neuron = %Neuron{
-      neuron_id: 2,
+      neuron_id: neuron_id,
       activation_function: {activation_function_id, activation_function}
     }
+    actuator_id = 3
     actuator = %Actuator{
-      actuator_id: 3,
+      actuator_id: actuator_id,
       actuator_function: actuator_function_id
     }
-
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
 
     sensors = %{
       sensor.sensor_id => sensor
@@ -418,6 +441,14 @@ defmodule Evolixir.HyperbolicTimeChamber do
     actuators = %{
       actuator.actuator_id => actuator
     }
+
+    weight = 0.0
+    {:ok, {sensors, neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     starting_records = %{
@@ -487,36 +518,39 @@ defmodule Evolixir.HyperbolicTimeChamber do
     activation_functions = %{
       activation_function_id => activation_function
     }
+    sensor_id = 1
     sensor = %Sensor{
-      sensor_id: 1,
+      sensor_id: sensor_id,
       sync_function: sync_function_id
     }
 
+    neuron_id = 2
     neuron = %Neuron{
-      neuron_id: 2,
+      neuron_id: neuron_id,
       activation_function: {activation_function_id, activation_function}
     }
+    actuator_id = 3
     actuator = %Actuator{
-      actuator_id: 3,
+      actuator_id: actuator_id,
       actuator_function: actuator_function_id
     }
 
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
-
     sensors = %{
-      sensor.sensor_id => sensor
+      sensor_id => sensor
     }
     neuron_layer = 1
     neurons = %{
-      neuron_layer => %{ neuron.neuron_id => neuron }
+      neuron_layer => %{ neuron_id => neuron }
     }
     actuators = %{
-      actuator.actuator_id => actuator
+      actuator_id => actuator
     }
+
+    weight = 0.0
+    {:ok, {sensors, neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     starting_records = %{
@@ -589,25 +623,24 @@ defmodule Evolixir.HyperbolicTimeChamber do
     activation_functions = %{
       activation_function_id => activation_function
     }
+    sensor_id = 1
     sensor = %Sensor{
-      sensor_id: 1,
+      sensor_id: sensor_id,
       sync_function: sync_function_id
     }
 
+    neuron_id = 2
     neuron = %Neuron{
-      neuron_id: 2,
+      neuron_id: neuron_id,
       activation_function: {activation_function_id, activation_function}
     }
+    actuator_id = 3
     actuator = %Actuator{
-      actuator_id: 3,
+      actuator_id: actuator_id,
       actuator_function: actuator_function_id
     }
 
-    {sensor, neuron} =
-      Sensor.connect_to_neuron(sensor, neuron, 0.0)
-
-    {neuron, actuator} =
-      Neuron.connect_to_actuator(neuron, actuator)
+    weight = 0.0
 
     sensors = %{
       sensor.sensor_id => sensor
@@ -619,6 +652,13 @@ defmodule Evolixir.HyperbolicTimeChamber do
     actuators = %{
       actuator.actuator_id => actuator
     }
+
+    {:ok, {sensors, neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     starting_records = %{

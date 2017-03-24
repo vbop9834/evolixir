@@ -3,6 +3,15 @@ defmodule NodeTestHelper do
   defstruct received_synapses: {},
     was_activated: false
 
+  def start_link(name) do
+    GenServer.start_link(__MODULE__, %NodeTestHelper{}, name: name)
+  end
+
+  @spec start_link() :: {:ok, pid}
+  def start_link() do
+    GenServer.start_link(__MODULE__, %NodeTestHelper{})
+  end
+
   def handle_cast({:receive_synapse, synapse}, state) do
     updated_received_synapses = Tuple.append(state.received_synapses, synapse)
     updated_state = %NodeTestHelper{state | received_synapses: updated_received_synapses}

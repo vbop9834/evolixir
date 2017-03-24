@@ -2,15 +2,22 @@ defmodule Evolixir.NeuronTest do
   use ExUnit.Case
   doctest Neuron
 
-  test "add_outbound_connection should add an outbound connection" do
-    outbound_connections = Map.new()
-    to_node_pid = 3
+  test "add_outbound_connection should add an outbound connection to a neuron map" do
+    neuron_id = 1
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+    neuron_layer = 1
+    neurons = %{
+      neuron_layer => %{neuron_id => neuron}
+    }
+    to_node_id = 3
     connection_id = 1
-    updated_outbound_connections = Neuron.add_outbound_connection(outbound_connections, to_node_pid, connection_id)
+    {:ok, neurons} =
+      Neuron.add_outbound_connection(neurons, neuron_layer, neuron_id, to_node_id, connection_id)
+    {:ok, neuron} = Neuron.get_neuron(neurons, neuron_layer, neuron_id)
 
-    assert Enum.count(updated_outbound_connections) == 1
-
-    assert Map.has_key?(updated_outbound_connections, {to_node_pid, connection_id}) == true
+    assert neuron.outbound_connections == %{{to_node_id, connection_id} => nil}
   end
 
   test "sigmoid should work" do
@@ -93,10 +100,10 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections, neuron_inbound_connection_id} = NeuralNode.add_inbound_connection(fake_from_node_id, weight)
+    {:ok, {inbound_connections, neuron_inbound_connection_id}} = NeuralNode.add_inbound_connection(fake_from_node_id, weight)
     neuron_test_helper_pid = :test_helper
-    {:ok, _} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{}, name: neuron_test_helper_pid)
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    {:ok, _} = NodeTestHelper.start_link(neuron_test_helper_pid)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -128,10 +135,10 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections_count_one, neuron_inbound_connection_id} = NeuralNode.add_inbound_connection(fake_from_node_id, weight)
-    {inbound_connections, _neuron_inbound_connection_two} = NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
+    {:ok, {inbound_connections_count_one, neuron_inbound_connection_id}} = NeuralNode.add_inbound_connection(fake_from_node_id, weight)
+    {:ok, {inbound_connections, _neuron_inbound_connection_two}} = NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -154,12 +161,12 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections_count_one, neuron_inbound_connection_id} =
+    {:ok, {inbound_connections_count_one, neuron_inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, weight)
-    {inbound_connections, neuron_inbound_connection_two_id} =
+    {:ok, {inbound_connections, neuron_inbound_connection_two_id}} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -192,10 +199,10 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections, neuron_inbound_connection_id} =
+    {:ok, {inbound_connections, neuron_inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, weight)
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -218,12 +225,12 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections_count_one, neuron_inbound_connection_id} =
+    {:ok, {inbound_connections_count_one, neuron_inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, weight)
-    {inbound_connections, neuron_inbound_connection_two_id} =
+    {:ok, {inbound_connections, neuron_inbound_connection_two_id}} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -327,12 +334,12 @@ defmodule Evolixir.NeuronTest do
     neuron_id = :neuron
     fake_from_node_id = 5
     fake_test_helper_connection_id = 9
-    {inbound_connections_count_one, neuron_inbound_connection_id} =
+    {:ok, {inbound_connections_count_one, neuron_inbound_connection_id}} =
       NeuralNode.add_inbound_connection(fake_from_node_id, weight)
-    {inbound_connections, neuron_inbound_connection_two_id} =
+    {:ok, {inbound_connections, neuron_inbound_connection_two_id}} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_from_node_id, weight)
     {:ok, neuron_test_helper_pid} = GenServer.start_link(NodeTestHelper,%NodeTestHelper{})
-    outbound_connections = Neuron.add_outbound_connection(neuron_test_helper_pid, fake_test_helper_connection_id)
+    outbound_connections = Neuron.add_outbound_connection_to_connections(neuron_test_helper_pid, fake_test_helper_connection_id)
     {:ok, _} = GenServer.start_link(Neuron,
       %Neuron{
         neuron_id: neuron_id,
@@ -382,6 +389,53 @@ defmodule Evolixir.NeuronTest do
     assert received_synapse.connection_id == fake_test_helper_connection_id
     assert_in_delta received_synapse.value, 0.99521, 0.001
     assert received_synapse.from_node_id == neuron_id
+  end
+
+  test "connect_neurons should connect two neurons together" do
+    neuron_id_one = 1
+    neuron_one = %Neuron{neuron_id: neuron_id_one}
+    neuron_id_two = 2
+    neuron_two = %Neuron{neuron_id: neuron_id_two}
+    neuron_layer = 1
+    neurons = %{
+      neuron_layer => %{
+        neuron_id_one => neuron_one,
+        neuron_id_two => neuron_two
+      }
+    }
+    weight = 20
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id_one, neuron_layer, neuron_id_two, weight)
+    {:ok, neuron_one} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_one)
+    {:ok, neuron_two} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_two)
+    connection_id = 1
+    assert neuron_one.outbound_connections == %{{neuron_id_two, connection_id} => nil}
+    assert neuron_two.inbound_connections == %{neuron_id_one => %{connection_id=>weight}}
+  end
+
+  test "disconnect_neurons should disconect two neuron" do
+    neuron_id_one = 1
+    neuron_one = %Neuron{neuron_id: neuron_id_one}
+    neuron_id_two = 2
+    neuron_two = %Neuron{neuron_id: neuron_id_two}
+    neuron_layer = 1
+    neurons = %{
+      neuron_layer => %{
+        neuron_id_one => neuron_one,
+        neuron_id_two => neuron_two
+      }
+    }
+    weight = 20
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id_one, neuron_layer, neuron_id_two, weight)
+    {:ok, neuron_one} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_one)
+    {:ok, neuron_two} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_two)
+    connection_id = 1
+    assert neuron_one.outbound_connections == %{{neuron_id_two, connection_id} => nil}
+    assert neuron_two.inbound_connections == %{neuron_id_one => %{connection_id=>weight}}
+    {:ok, neurons} = Neuron.disconnect_neurons(neurons, neuron_layer, neuron_id_one, neuron_layer, neuron_id_two, connection_id)
+    {:ok, neuron_one} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_one)
+    {:ok, neuron_two} = Neuron.get_neuron(neurons, neuron_layer, neuron_id_two)
+    assert neuron_one.outbound_connections == Map.new()
+    assert neuron_two.inbound_connections == Map.new()
   end
 
 end

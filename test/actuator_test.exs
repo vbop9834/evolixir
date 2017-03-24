@@ -21,7 +21,7 @@ defmodule Evolixir.ActuatorTest do
       :ok = GenServer.call(actuator_test_helper_pid, {:activate, output_value})
     end}
 
-    {inbound_connections, connection_id} =
+    {:ok, {inbound_connections, connection_id}} =
       NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
@@ -53,9 +53,9 @@ defmodule Evolixir.ActuatorTest do
     end}
 
     fake_node_pid = 9
-    {inbound_connections_count_one, connection_id} =
+    {:ok, {inbound_connections_count_one, connection_id}} =
       NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
-    {inbound_connections, connection_id_two} =
+    {:ok, {inbound_connections, connection_id_two}} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
@@ -96,7 +96,7 @@ defmodule Evolixir.ActuatorTest do
 
     fake_node_pid = 4
 
-    {inbound_connections, connection_id} =
+    {:ok, {inbound_connections, connection_id}} =
       NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
@@ -128,9 +128,9 @@ defmodule Evolixir.ActuatorTest do
 
     fake_node_pid = 75
 
-    {inbound_connections_count_one, connection_id} =
+    {:ok, {inbound_connections_count_one, connection_id}} =
       NeuralNode.add_inbound_connection(Map.new(), fake_node_pid, 0.0)
-    {inbound_connections, connection_id_two} =
+    {:ok, {inbound_connections, connection_id_two}} =
       NeuralNode.add_inbound_connection(inbound_connections_count_one, fake_node_pid, 0.0)
 
     {:ok, actuator_pid} = GenServer.start_link(Actuator,
@@ -156,6 +156,26 @@ defmodule Evolixir.ActuatorTest do
     updated_test_state = GenServer.call(actuator_test_helper_pid, :get_state)
 
     assert updated_test_state.was_activated == false
+  end
+
+  test "connect_neuron_to_actuator should connect a neuron to an actuator" do
+    neuron_id = 1
+    neuron = %Neuron{neuron_id: neuron_id}
+    neuron_layer = 1
+    {:ok, neurons} = Neuron.add_to_neural_layer(neuron_layer, [neuron])
+    actuator_id = 2
+    actuator = %Actuator{actuator_id: actuator_id}
+    actuators = %{actuator_id => actuator}
+    {:ok, {neurons, actuators}} = Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+    {:ok, neuron} = Neuron.get_neuron(neurons, neuron_layer, neuron_id)
+    {:ok, actuator} = Actuator.get_actuator(actuators, actuator_id)
+    connection_id = 1
+    assert Enum.count(neuron.outbound_connections) == 1
+    assert Map.has_key?(neuron.outbound_connections, {actuator_id, connection_id}) == true
+    assert Enum.count(actuator.inbound_connections) == 1
+    assert Map.has_key?(actuator.inbound_connections, neuron_id) == true
+    connections_from_neuron = Map.get(actuator.inbound_connections, neuron_id)
+    assert Map.has_key?(connections_from_neuron, connection_id)
   end
 
 end

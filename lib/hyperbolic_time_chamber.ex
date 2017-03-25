@@ -77,29 +77,30 @@ defmodule HyperbolicTimeChamber do
     :ok
   end
 
-  defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
-    Logger.info "Current generation enumerated"
+  defp generation_limit_reached?(maximum_number_per_generation, mutated_generation) do
     count_of_mutated_generation = Enum.count(mutated_generation)
-    Logger.debug fn -> "Mutated Generation count is #{inspect count_of_mutated_generation}" end
+    Logger.info "Mutated Generation count is #{inspect count_of_mutated_generation}"
     case count_of_mutated_generation >= maximum_number_per_generation do
       true ->
         Logger.info "Generation limit reached"
         {:generation_complete, mutated_generation}
       false ->
-        Logger.info "Generation evolution is incomplete. Enumerating over current generation again"
+        Logger.info "Enumerating over current generation again"
         {:generation_incomplete, mutated_generation}
     end
+  end
+
+  defp process_generation_evolution(maximum_number_per_generation, _mutation_properties, _possible_mutations, [], mutated_generation) do
+    Logger.info "Current generation enumerated"
+    generation_limit_reached?(maximum_number_per_generation, mutated_generation)
   end
 
   defp process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, [{_cortex_id, {sensors, neurons, actuators}} | remaining_generation], mutated_generation) do
     count_of_mutated_generation = Enum.count(mutated_generation)
     Logger.debug fn -> "Mutated Generation count is #{inspect count_of_mutated_generation}" end
-    case count_of_mutated_generation >= maximum_number_per_generation do
-      true ->
-        Logger.info "Generation limit reached. Ending enumeration"
-        {:generation_complete, mutated_generation}
-      false ->
-        Logger.info "Generation evolution is incomplete."
+    case generation_limit_reached?(maximum_number_per_generation, mutated_generation) do
+      {:generation_complete, mutated_generation} -> {:generation_complete, mutated_generation}
+      {:generation_incomplete, mutated_generation} ->
         mutation_properties = %MutationProperties{mutation_properties |
                                                   sensors: sensors,
                                                   neurons: neurons,
@@ -107,8 +108,8 @@ defmodule HyperbolicTimeChamber do
                                                  }
         {:ok, mutated_neural_network} = Mutations.mutate_neural_network(possible_mutations, mutation_properties)
         new_cortex_id = Enum.count(mutated_generation) + 1
-        updated_mutated_generation = Map.put(mutated_generation, new_cortex_id, mutated_neural_network)
-        process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, remaining_generation, updated_mutated_generation)
+        mutated_generation = Map.put(mutated_generation, new_cortex_id, mutated_neural_network)
+        process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, remaining_generation, mutated_generation)
     end
   end
 

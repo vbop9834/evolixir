@@ -35,7 +35,7 @@ defmodule CortexController do
     check_connections_from_node =
       fn to_neuron_layer, to_node_id, {from_node_id, connections_from_node} ->
         case is_connection_recursive?(neurons, to_neuron_layer, from_node_id) do
-          {:error, reason} -> #ignore because it could be a sensor or actuatr
+          {:error, _reason} -> #ignore because it could be a sensor or actuator
             #TODO check for this before doing these operations
             ()
           true ->

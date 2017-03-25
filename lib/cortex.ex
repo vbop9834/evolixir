@@ -175,18 +175,33 @@ defmodule Cortex do
     worker(Actuator, [registry_func, actuator_struct], restart: :transient, id: actuator_name)
   end
 
+  def send_think_message(to_process, timeout) do
+    :ok = GenServer.call(to_process, :think, timeout)
+    :ok
+  end
+
+  @spec think(integer, atom, {cortex_id, perturb_id}) :: :ok
+  def think(timeout, registry_name, {cortex_id, perturb_id}) do
+    via_tuple = {:via, Registry, {registry_name, {cortex_id, perturb_id, :controller}}}
+    send_think_message(via_tuple, timeout)
+  end
+
+  @spec think(integer, atom, cortex_id) :: :ok
+  def think(timeout, registry_name, cortex_id) do
+    via_tuple = {:via, Registry, {registry_name, {cortex_id, :controller}}}
+    send_think_message(via_tuple, timeout)
+  end
+
   @spec think(atom, {cortex_id, perturb_id}) :: :ok
   def think(registry_name, {cortex_id, perturb_id}) do
-    via_tuple = {:via, Registry, {registry_name, {cortex_id, perturb_id, :controller}}}
-    :ok = GenServer.call(via_tuple, :think)
-    :ok
+    timeout = 5000
+    think(timeout, registry_name, {cortex_id, perturb_id})
   end
 
   @spec think(atom, cortex_id) :: :ok
   def think(registry_name, cortex_id) do
-    via_tuple = {:via, Registry, {registry_name, {cortex_id, :controller}}}
-    :ok = GenServer.call(via_tuple, :think)
-    :ok
+    timeout = 5000
+    think(timeout, registry_name, cortex_id)
   end
 
   @spec reset_network(atom, {cortex_id, perturb_id}) :: :ok

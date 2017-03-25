@@ -20,7 +20,8 @@ defmodule HyperbolicTimeChamber do
     minds_per_generation: 5,
     fitness_function: nil,
     max_attempts_to_perturb: nil,
-    end_of_generation_function: nil
+    end_of_generation_function: nil,
+    learning_function: nil
 
   defp get_sync_function_from_source(sync_sources, cortex_id, sync_function) do
     sync_function_id =
@@ -124,11 +125,12 @@ defmodule HyperbolicTimeChamber do
     evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, updated_mutated_generation)
   end
 
-  defp evolve_generation(maximum_number_per_generation, activation_functions, sync_sources, actuator_sources, possible_mutations, generation) do
+  defp evolve_generation(maximum_number_per_generation, activation_functions, sync_sources, actuator_sources, learning_function, possible_mutations, generation) do
     Logger.info "Starting generation evolution"
     sync_functions = Map.keys(sync_sources)
     actuator_functions = Map.keys(actuator_sources)
     mutation_properties = %MutationProperties{
+      learning_function: learning_function,
       activation_functions: activation_functions,
       sync_functions: sync_functions,
       actuator_functions: actuator_functions
@@ -142,11 +144,12 @@ defmodule HyperbolicTimeChamber do
         activation_functions: activation_functions,
         minds_per_generation: minds_per_generation,
         possible_mutations: possible_mutations,
+        learning_function: learning_function,
         select_fit_population_function: select_fit_population_function
              }, scored_generation_records) do
     Logger.info "Selecting fit population"
     fit_generation = select_fit_population_function.(scored_generation_records)
-    new_generation = evolve_generation(minds_per_generation, activation_functions, sync_sources, actuator_sources, possible_mutations, fit_generation)
+    new_generation = evolve_generation(minds_per_generation, activation_functions, sync_sources, actuator_sources, learning_function, possible_mutations, fit_generation)
     new_generation
   end
 

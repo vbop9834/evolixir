@@ -708,4 +708,120 @@ defmodule Evolixir.HyperbolicTimeChamber do
     end)
   end
 
+  test "HyperbolicTimeChamber process should have a learning_function for neurons" do
+    {:ok, test_helper_pid} = GenServer.start_link(NodeTestHelper, %NodeTestHelper{})
+    actuator_function_id = 1
+    actuator_function = fn _cortex_id ->
+      fn neural_output ->
+        GenServer.call(test_helper_pid, {:activate, neural_output})
+      end
+    end
+    actuator_sources = %{
+      actuator_function_id => actuator_function
+    }
+
+    sync_function_id = 1
+    sync_function_source = fn _cortex_id ->
+      fn ->
+        [1, 2, 3]
+      end
+    end
+    sync_function_sources = %{
+      sync_function_id => sync_function_source
+    }
+
+    activation_function_id = :sigmoid
+    activation_function =
+      &ActivationFunction.sigmoid/1
+    activation_functions = %{
+      activation_function_id => activation_function
+    }
+    sensor_id = 1
+    sensor = %Sensor{
+      sensor_id: sensor_id,
+      sync_function: sync_function_id
+    }
+
+    learning_function = {:hebbian, 0.7}
+    neuron_id = 2
+    neuron = %Neuron{
+      learning_function: learning_function,
+      neuron_id: neuron_id,
+      activation_function: {activation_function_id, activation_function}
+    }
+    actuator_id = 3
+    actuator = %Actuator{
+      actuator_id: actuator_id,
+      actuator_function: actuator_function_id
+    }
+
+    weight = 0.0
+
+    sensors = %{
+      sensor.sensor_id => sensor
+    }
+    neuron_layer = 1
+    neurons = %{
+      neuron_layer => %{ neuron.neuron_id => neuron }
+    }
+    actuators = %{
+      actuator.actuator_id => actuator
+    }
+
+    {:ok, {sensors, neurons}} =
+      Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    {:ok, {neurons, actuators}} =
+      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
+
+    cortex_id = 1
+    neural_network = {sensors, neurons, actuators}
+    starting_records = %{
+      cortex_id => neural_network
+    }
+
+    chamber_name = :test_chamber
+    minds_per_generation = 1
+    possible_mutations = Mutations.default_mutation_sequence
+
+    select_fit_population_function = HyperbolicTimeChamber.get_select_fit_population_function(50)
+
+    end_of_generation_function = fn scored_generation_records ->
+      assert Enum.count(scored_generation_records) == 1
+      {score, cortex_id, _neural_network} = hd scored_generation_records
+      assert score > 0
+      assert cortex_id == 1
+    end
+
+    fitness_function =
+      fn _cortex_id ->
+        {:end_think_cycle, :random.uniform()}
+      end
+
+    hyperbolic_time_chamber_properties = %HyperbolicTimeChamber{
+      learning_function: learning_function,
+      fitness_function: fitness_function,
+      actuator_sources: actuator_sources,
+      sync_sources: sync_function_sources,
+      activation_functions: activation_functions,
+      minds_per_generation: minds_per_generation,
+      possible_mutations: possible_mutations,
+      select_fit_population_function: select_fit_population_function,
+      starting_generation_records: starting_records,
+      end_of_generation_function: end_of_generation_function
+    }
+
+    {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
+
+    think_timeout = 5000
+    Enum.each(Enum.to_list(1..100), fn _ ->
+      :ok = HyperbolicTimeChamber.think_and_act(chamber_pid, think_timeout)
+      :timer.sleep(5)
+      updated_test_state = GenServer.call(test_helper_pid, :get_state)
+
+      {true, output_value} = updated_test_state.was_activated
+      assert output_value != nil
+    end)
+  end
+
 end

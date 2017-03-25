@@ -379,7 +379,12 @@ defmodule Neuron do
   end
 
   defp process_learning_function({:hebbian, learning_coefficient}, old_weight, weighted_inbound_synapse, outbound_synapse) do
-    unweighted_inbound_synapse = weighted_inbound_synapse / old_weight
+    unweighted_inbound_synapse =
+    #TODO think on this
+      case old_weight do
+        0.0 -> 0.0
+        old_weight -> weighted_inbound_synapse / old_weight
+      end
     old_weight + learning_coefficient * unweighted_inbound_synapse * outbound_synapse
   end
 

@@ -5,7 +5,8 @@ defmodule HyperbolicTimeChamberState do
     active_cortex_records: nil,
     scored_generation_records: [],
     remaining_generation: [],
-    chamber_registry_name: nil
+    chamber_registry_name: nil,
+    think_timeout: 5000
 end
 defmodule HyperbolicTimeChamber do
   use GenServer
@@ -21,7 +22,8 @@ defmodule HyperbolicTimeChamber do
     fitness_function: nil,
     max_attempts_to_perturb: nil,
     end_of_generation_function: nil,
-    learning_function: nil
+    learning_function: nil,
+    think_timeout: 5000
 
   defp get_sync_function_from_source(sync_sources, cortex_id, sync_function) do
     sync_function_id =
@@ -336,7 +338,7 @@ defmodule HyperbolicTimeChamber do
 
   def process_think_and_act(state) do
     Logger.info "Sending think message to active cortex"
-    Cortex.think(state.chamber_registry_name, state.active_cortex_id)
+    Cortex.think(state.think_timeout, state.chamber_registry_name, state.active_cortex_id)
     Logger.info "Sending active cortex through fitness function"
     fitness_function_result = state.hyperbolic_time_chamber_properties.fitness_function.(state.active_cortex_id)
     process_fitness_function_result(fitness_function_result, state)
@@ -353,7 +355,8 @@ defmodule HyperbolicTimeChamber do
       active_cortex_records: cortex_records,
       hyperbolic_time_chamber_properties: hyperbolic_time_chamber_properties,
       remaining_generation: remaining_generation,
-      chamber_registry_name: chamber_name
+      chamber_registry_name: chamber_name,
+      think_timeout: hyperbolic_time_chamber_properties.think_timeout
     }
     GenServer.start_link(__MODULE__, state)
   end

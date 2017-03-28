@@ -9,7 +9,7 @@ defmodule Actuator do
   @type actuator :: Actuator
   @type actuator_id :: NeuralNode.node_id
   @type actuators :: [{actuator_id, actuator}]
-  @type actuator_function() :: output_value
+  @type actuator_function :: (() -> output_value)
 
   @typep output_value :: NeuralNode.output_value
   @typep connection_id :: NeuralNode.connection_id

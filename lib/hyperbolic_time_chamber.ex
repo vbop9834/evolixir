@@ -25,14 +25,19 @@ defmodule HyperbolicTimeChamber do
     learning_function: nil,
     think_timeout: 5000
 
-  defp get_sync_function_from_source(sync_sources, cortex_id, sync_function) do
-    sync_function_id =
-      case sync_function do
-        {sync_function_id, _sync_function} -> sync_function_id
-        sync_function_id -> sync_function_id
-      end
-    sync_function_source = Map.get(sync_sources, sync_function_id)
-    {sync_function_id, sync_function_source.(cortex_id)}
+  @type sync_source_id :: integer
+  @type sync_source :: (Cortex.cortex_id -> Sensor.sync_function)
+  @type sync_sources :: [{sync_source_id, sync_source}]
+
+  @spec get_sync_function_from_source(sync_sources, Cortex.cortex_id, {sync_source_id, Sensor.sync_function}) :: {sync_source_id, Sensor.sync_function}
+  defp get_sync_function_from_source(sync_sources, cortex_id, {sync_source_id, _old_sync_function}) do
+    get_sync_function_from_source(sync_sources, cortex_id, sync_source_id)
+  end
+
+  @spec get_sync_function_from_source(sync_sources, Cortex.cortex_id, sync_source_id) :: {sync_source_id, Sensor.sync_function}
+  defp get_sync_function_from_source(sync_sources, cortex_id, sync_source_id) do
+    sync_function_source = Map.get(sync_sources, sync_source_id)
+    {sync_source_id, sync_function_source.(cortex_id)}
   end
 
   defp get_actuator_function_from_source(actuator_sources, cortex_id, actuator_function) do

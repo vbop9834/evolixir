@@ -12,7 +12,7 @@ defmodule Sensor do
   @type sensor_data :: [Float]
   @typep sensor_data_vector_size :: Integer
 
-  @type sync_function() :: sensor_data
+  @type sync_function :: (() -> sensor_data)
   @type registry_func :: Cortex.registry_func
 
   @typep connection_id :: Neuron.connection_id

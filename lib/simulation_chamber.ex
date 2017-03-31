@@ -13,6 +13,7 @@ defmodule SimulationChamber do
     end_of_generation_function: nil,
     learning_function: nil,
     think_timeout: 5000,
+    lifetime_timeout: 60000,
     think_cycles_per_lifetime: 5
 
   @type chamber_name :: atom
@@ -94,9 +95,10 @@ defmodule SimulationChamber do
         scored_generation_record
         end)
       end
+    timeout = simulation_chamber_properties.lifetime_timeout
     scored_generation_records =
       Enum.map(generation_records, create_brain_task)
-      |> Enum.map(fn task -> Task.await(task) end)
+      |> Enum.map(fn task -> Task.await(task, timeout) end)
     {:ok, scored_generation_records}
   end
 

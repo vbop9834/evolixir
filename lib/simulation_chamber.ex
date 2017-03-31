@@ -43,7 +43,7 @@ defmodule SimulationChamber do
 
   @spec process_think_cycles(chamber_name, think_timeout, fitness_function, Cortex.cortex_id, think_cycles, think_cycles, scores) :: {:ok, score}
   defp process_think_cycles(chamber_name, _think_timeout, _fitness_function, cortex_id, maximum_think_cycles, current_cycle_number, scores)
-    when maximum_think_cycles >= current_cycle_number do
+    when maximum_think_cycles <= current_cycle_number do
     #Terminate Brain
     :ok = Cortex.kill_cortex(chamber_name, cortex_id)
     #Sum the scores from think cycles
@@ -53,7 +53,7 @@ defmodule SimulationChamber do
 
   @spec process_think_cycles(chamber_name, think_timeout, fitness_function, Cortex.cortex_id, think_cycles, think_cycles, scores) :: {:ok, score}
   defp process_think_cycles(chamber_name, think_timeout, fitness_function, cortex_id, maximum_think_cycles, current_cycle_number, scores)
-    when maximum_think_cycles < current_cycle_number do
+    when maximum_think_cycles > current_cycle_number do
     #Stimulate the cortex to process a think cycle
     :ok = think(chamber_name, think_timeout, cortex_id)
     #Score the result of the think cycle

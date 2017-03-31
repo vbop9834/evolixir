@@ -70,7 +70,7 @@ defmodule Evolixir.SimulationChamber do
       cortex_id => neural_network
     }
 
-    chamber_name = :test_chamber
+    chamber_name = :simulation_chamber
     minds_per_generation = 5
     possible_mutations = Mutations.default_mutation_sequence
 

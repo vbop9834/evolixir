@@ -814,7 +814,7 @@ defmodule Evolixir.HyperbolicTimeChamber do
     {:ok, chamber_pid} = HyperbolicTimeChamber.start_link(chamber_name, hyperbolic_time_chamber_properties)
 
     think_timeout = 5000
-    Enum.each(Enum.to_list(1..100), fn _ ->
+    Enum.each(Enum.to_list(1..50), fn _ ->
       :ok = HyperbolicTimeChamber.think_and_act(chamber_pid, think_timeout)
       :timer.sleep(5)
       updated_test_state = GenServer.call(test_helper_pid, :get_state)

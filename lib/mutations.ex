@@ -12,7 +12,7 @@ end
 defmodule Mutations do
   require Logger
 
-  @type neural_network :: {Sensor.sensors, Neuron.neurons, Actuator.actuators}
+  @type neural_network :: Cortex.neural_network
 
   def default_mutation_sequence do
     [

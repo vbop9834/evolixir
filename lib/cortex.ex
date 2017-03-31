@@ -117,6 +117,8 @@ defmodule Cortex do
   @type registry_func_sig(id) :: {:via, Registry, {cortex_id, perturb_id, id}}
   @type registry_func :: registry_func_sig(NeuralNode.node_id)
 
+  @type neural_network :: {Sensor.sensors, Neuron.neurons, Actuator.actuators}
+
   @typep worker :: :worker | :supervisor
 
   @spec get_neuron_struct(registry_func, Neuron.neuron) :: Neuron.neuron

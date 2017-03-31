@@ -30,17 +30,17 @@ defmodule HyperbolicTimeChamber do
   @type sync_sources :: [{sync_source_id, sync_source}]
 
   @spec get_sync_function_from_source(sync_sources, Cortex.cortex_id, {sync_source_id, Sensor.sync_function}) :: {sync_source_id, Sensor.sync_function}
-  defp get_sync_function_from_source(sync_sources, cortex_id, {sync_source_id, _old_sync_function}) do
+  def get_sync_function_from_source(sync_sources, cortex_id, {sync_source_id, _old_sync_function}) do
     get_sync_function_from_source(sync_sources, cortex_id, sync_source_id)
   end
 
   @spec get_sync_function_from_source(sync_sources, Cortex.cortex_id, sync_source_id) :: {sync_source_id, Sensor.sync_function}
-  defp get_sync_function_from_source(sync_sources, cortex_id, sync_source_id) do
+  def get_sync_function_from_source(sync_sources, cortex_id, sync_source_id) do
     sync_function_source = Map.get(sync_sources, sync_source_id)
     {sync_source_id, sync_function_source.(cortex_id)}
   end
 
-  defp get_actuator_function_from_source(actuator_sources, cortex_id, actuator_function) do
+  def get_actuator_function_from_source(actuator_sources, cortex_id, actuator_function) do
     actuator_function_id =
       case actuator_function do
         {actuator_function_id, _actuator_function_id} -> actuator_function_id
@@ -76,7 +76,7 @@ defmodule HyperbolicTimeChamber do
     |> Map.new
   end
 
-  defp create_brain(registry_name, sync_sources, actuator_sources, {cortex_id, {sensors, neurons, actuators}}) do
+  def create_brain(registry_name, sync_sources, actuator_sources, {cortex_id, {sensors, neurons, actuators}}) do
     Logger.info "Starting brain creation"
     sensors = hook_sensors_up_to_source(sync_sources, cortex_id, sensors)
     actuators = hook_actuators_up_to_source(actuator_sources, cortex_id, actuators)
@@ -121,18 +121,18 @@ defmodule HyperbolicTimeChamber do
     end
   end
 
-  defp evolve_generation(_maximum_number_per_generation, _mutation_properties, _possible_mutations, _generation, {:generation_complete, mutated_generation}) do
+  def evolve_generation(_maximum_number_per_generation, _mutation_properties, _possible_mutations, _generation, {:generation_complete, mutated_generation}) do
     Logger.info "Generation evolution complete"
     mutated_generation
   end
 
-  defp evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, {:generation_incomplete, mutated_generation}) do
+  def evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, {:generation_incomplete, mutated_generation}) do
     Logger.info "Generation evolution incomplete. Iterating and mutating"
     updated_mutated_generation = process_generation_evolution(maximum_number_per_generation, mutation_properties, possible_mutations, generation, mutated_generation)
     evolve_generation(maximum_number_per_generation, mutation_properties, possible_mutations, generation, updated_mutated_generation)
   end
 
-  defp evolve_generation(maximum_number_per_generation, activation_functions, sync_sources, actuator_sources, learning_function, possible_mutations, generation) do
+  def evolve_generation(maximum_number_per_generation, activation_functions, sync_sources, actuator_sources, learning_function, possible_mutations, generation) do
     Logger.info "Starting generation evolution"
     sync_functions = Map.keys(sync_sources)
     actuator_functions = Map.keys(actuator_sources)

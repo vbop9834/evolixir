@@ -128,17 +128,8 @@ defmodule SimulationChamber do
     :ok
   end
 
-  defp kill_registry(chamber_name, key) do
-    Registry.unregister(chamber_name, key)
-  end
-
   defp kill_registry(chamber_name) do
-    case Registry.keys(chamber_name, self()) do
-      [] -> Registry.unregister(chamber_name, "")
-      keys ->
-        keys
-        |> Enum.each(&kill_registry(chamber_name, &1))
-    end
+    :ok = GenServer.stop(chamber_name)
     :ok
   end
 

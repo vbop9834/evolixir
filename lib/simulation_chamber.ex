@@ -1,7 +1,6 @@
 defmodule SimulationChamber do
   require Logger
   defstruct chamber_name: :simulation_chamber,
-    fitness_function: nil,
     select_fit_population_function: nil,
     starting_generation_records: Map.new(),
     activation_functions: Map.new(),

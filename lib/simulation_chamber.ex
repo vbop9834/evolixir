@@ -94,8 +94,10 @@ defmodule SimulationChamber do
         try do
           {:ok, scored_generation_record} = simulate_brain(simulation_chamber_properties, {cortex_id, neural_network})
           scored_generation_record
+        catch
+          _e -> {-500, cortex_id, neural_network}
         rescue
-          _exception -> {-500, cortex_id, neural_network}
+          _e -> {-500, cortex_id, neural_network}
         end
       end)
     end

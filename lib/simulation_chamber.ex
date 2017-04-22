@@ -91,10 +91,14 @@ defmodule SimulationChamber do
     #Create async tasks and await for processing each brain's think cycles and scoring the brain
     create_brain_task = fn {cortex_id, neural_network} ->
       Task.async(fn ->
-        {:ok, scored_generation_record} = simulate_brain(simulation_chamber_properties, {cortex_id, neural_network})
-        scored_generation_record
-        end)
-      end
+        try do
+          {:ok, scored_generation_record} = simulate_brain(simulation_chamber_properties, {cortex_id, neural_network})
+          scored_generation_record
+        rescue
+          _exception -> {-500, cortex_id, neural_network}
+        end
+      end)
+    end
     timeout = simulation_chamber_properties.lifetime_timeout
     scored_generation_records =
       Enum.map(generation_records, create_brain_task)

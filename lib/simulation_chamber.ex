@@ -38,8 +38,14 @@ defmodule SimulationChamber do
 
   @spec think(chamber_name, think_timeout, Cortex.cortex_id) :: :ok
   defp think(chamber_name, think_timeout, cortex_id) do
-    :ok = Cortex.think(think_timeout, chamber_name, cortex_id)
-    :ok
+    try do
+      :ok = Cortex.think(think_timeout, chamber_name, cortex_id)
+      :ok
+    catch
+      :exit, _ -> :error
+    rescue
+      _e -> :error
+    end
   end
 
   @spec process_think_cycles(chamber_name, think_timeout, fitness_function, Cortex.cortex_id, think_cycles, think_cycles, scores) :: {:ok, score}
@@ -56,22 +62,38 @@ defmodule SimulationChamber do
   defp process_think_cycles(chamber_name, think_timeout, fitness_function, cortex_id, maximum_think_cycles, current_cycle_number, scores)
     when maximum_think_cycles > current_cycle_number do
     #Stimulate the cortex to process a think cycle
-    :ok = think(chamber_name, think_timeout, cortex_id)
-    #Score the result of the think cycle
-    case fitness_function.(cortex_id) do
-      {:continue_think_cycle, score} ->
-        #Add score to scores
-        scores = scores ++ [score]
-        #Increment cycle number
-        current_cycle_number = current_cycle_number + 1
-        #Recurse
-        process_think_cycles(chamber_name, think_timeout, fitness_function, cortex_id, maximum_think_cycles, current_cycle_number, scores)
-      {:end_think_cycle, score} ->
-        #Terminate Brain
+    case think(chamber_name, think_timeout, cortex_id) do
+      :ok ->
+        #Score the result of the think cycle
+        case fitness_function.(cortex_id) do
+          {:continue_think_cycle, score} ->
+            #Add score to scores
+            scores = scores ++ [score]
+            #Increment cycle number
+            current_cycle_number = current_cycle_number + 1
+            #Recurse
+            process_think_cycles(chamber_name, think_timeout, fitness_function, cortex_id, maximum_think_cycles, current_cycle_number, scores)
+          {:end_think_cycle, score} ->
+            #Terminate Brain
+            :ok = Cortex.kill_cortex(chamber_name, cortex_id)
+            #Think cycles terminated by fitness function
+            #Sum the scores from think cycles
+            total_score =
+              case scores do
+                [] -> -500
+                scores -> (scores |> Enum.sum) + score
+              end
+            {:ok, total_score}
+        end
+      :error ->
         :ok = Cortex.kill_cortex(chamber_name, cortex_id)
         #Think cycles terminated by fitness function
         #Sum the scores from think cycles
-        total_score = (scores |> Enum.sum) + score
+        total_score =
+          case scores do
+            [] -> -500
+            scores -> (scores |> Enum.sum)
+          end
         {:ok, total_score}
     end
   end
@@ -95,7 +117,7 @@ defmodule SimulationChamber do
           {:ok, scored_generation_record} = simulate_brain(simulation_chamber_properties, {cortex_id, neural_network})
           scored_generation_record
         catch
-          _e -> {-500, cortex_id, neural_network}
+          :exit, _ -> {-500, cortex_id, neural_network}
         rescue
           _e -> {-500, cortex_id, neural_network}
         end

@@ -159,9 +159,6 @@ defmodule Evolixir.SimulationChamber do
     {:ok, {sensors, neurons}} =
       Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
 
-    {:ok, {neurons, actuators}} =
-      Actuator.connect_neuron_to_actuator(neurons, actuators, neuron_layer, neuron_id, actuator_id)
-
     cortex_id = 1
     neural_network = {sensors, neurons, actuators}
     starting_records = %{
@@ -176,8 +173,7 @@ defmodule Evolixir.SimulationChamber do
 
     fitness_function =
       fn _cortex_id ->
-#        {:continue_think_cycle, :random.uniform()}
-        nil
+        {:continue_think_cycle, :random.uniform()}
       end
 
     think_timeout = 10
@@ -194,7 +190,7 @@ defmodule Evolixir.SimulationChamber do
       starting_generation_records: starting_records
     }
 
-    generations_to_simulate = 50
+    generations_to_simulate = 1
     {:ok, scored_generation_records} = SimulationChamber.simulate(simulation_chamber_properties, generations_to_simulate)
     assert scored_generation_records != []
   end

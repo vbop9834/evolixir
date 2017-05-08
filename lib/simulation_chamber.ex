@@ -14,7 +14,8 @@ defmodule SimulationChamber do
     learning_function: nil,
     think_timeout: 5000,
     lifetime_timeout: 60000,
-    think_cycles_per_lifetime: 5
+    think_cycles_per_lifetime: 5,
+    neural_connection_cost: 0
 
   @type chamber_name :: atom
   @type simulation_chamber_properties :: SimulationChamber
@@ -27,6 +28,7 @@ defmodule SimulationChamber do
 
   @type score :: integer
   @type scores :: [score]
+  @type neural_connection_cost :: integer
   @type fitness_function :: (Cortex.cortex_id -> score)
   @type generation_record :: {Cortex.cortex_id, Cortex.neural_network}
   @type generation_records :: [generation_record]
@@ -105,6 +107,26 @@ defmodule SimulationChamber do
     :ok = HyperbolicTimeChamber.create_brain(simulation_chamber_properties.chamber_name, simulation_chamber_properties.sync_sources, simulation_chamber_properties.actuator_sources, {cortex_id, neural_network})
     #Process think cycles
     {:ok, score} = process_think_cycles(simulation_chamber_properties.chamber_name, simulation_chamber_properties.think_timeout, simulation_chamber_properties.fitness_function, cortex_id, simulation_chamber_properties.think_cycles_per_lifetime, 0, [])
+    #Calculate neural connection cost
+    connection_cost =
+      case simulation_chamber_properties.neural_connection_cost do
+        0 -> 0
+        neural_connection_cost ->
+          {_sensors, neurons, _actuators} = neural_network
+          calculate_neuron_connection_cost = fn {_neuron_id, neuron} ->
+            total_connections = neuron.inbound_connections |> Enum.count
+            total_connections * neural_connection_cost
+          end
+          calculate_total_connection_cost = fn {_neuron_layer, neurons} ->
+            neurons
+            |> Enum.map(calculate_neuron_connection_cost)
+            |> Enum.sum
+          end
+          neurons
+          |> Enum.map(calculate_total_connection_cost)
+          |> Enum.sum
+      end
+    score = score - connection_cost
     {:ok, {score, cortex_id, neural_network}}
   end
 

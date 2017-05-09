@@ -29,7 +29,7 @@ defmodule Mutations do
       :add_neuron_insplice,
       :add_actuator,
       :add_sensor_link,
-      :add_actuator_link
+      :add_actuator_link,
     ]
   end
 
@@ -329,6 +329,34 @@ defmodule Mutations do
     end
   end
 
+  def remove_inbound_connection(sensors, neurons) do
+    #Acquire random neuron to remove connection
+    {:ok, {neuron_layer, neuron_id}} = Neuron.get_random_neuron(neurons)
+    #Check if neuron has more than one connection
+    case Neuron.has_more_than_one_inbound_connection(neurons, neuron_layer, neuron_id) > 1 do
+      false -> {:error, "Remove Inbound Connection - Neuron only has one connection"}
+      true ->
+       {:ok, {inbound_node_id, connection_id, _weight}} = Neuron.get_random_inbound_connection(neurons, neuron_layer, neuron_id)
+        #Is the inbound connection a sensor or a neuron?
+        case Sensor.get_sensor(sensors, inbound_node_id) do
+          {:ok, _sensor} ->
+            sensor_id = inbound_node_id
+            {:ok, {sensors, neurons}} = Sensor.disconnect_from_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, connection_id)
+            {:ok, {sensors, neurons}}
+          {:error, _reason} ->
+            #Check if inbound neuron has more than one outbound connection
+            case Neuron.has_more_than_one_outbound_connection(neurons, neuron_layer, neuron_id) do
+              false -> {:error, "Remove inbound connection - Neuron only has one outbound connection"}
+              true ->
+                from_neuron_id = inbound_node_id
+                {:ok, from_neuron_layer} = Neuron.find_neuron_layer(neurons, from_neuron_id)
+                {:ok, neurons} = Neuron.disconnect_neurons(neurons,from_neuron_layer, from_neuron_id, neuron_layer, neuron_id, connection_id)
+                {:ok, {sensors, neurons}}
+            end
+        end
+    end
+  end
+
   def mutate(%MutationProperties{
         mutation: :add_bias,
         sensors: sensors,
@@ -509,6 +537,19 @@ defmodule Mutations do
         {:error, reason} -> {:error, reason}
         {:ok, {neurons, actuators}} -> {:ok, {sensors, neurons, actuators}}
       end
+  end
+
+  def mutate(%MutationProperties{
+        mutation: :remove_inbound_connection,
+        sensors: sensors,
+        neurons: neurons,
+        actuators: actuators,
+        actuator_functions: actuator_functions
+             }) do
+    case remove_inbound_connection(sensors, neurons) do
+      {:error, reason} -> {:error, reason}
+      {:ok, {sensors, neurons}} -> {:ok, {sensors, neurons, actuators}}
+    end
   end
 
   defp get_mutation_sequence(possible_mutations, number_of_nodes) do

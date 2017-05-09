@@ -617,7 +617,7 @@ defmodule Evolixir.MutationsTest do
     fake_sensor_id = 4
     used_sync_function = {:used, nil}
     sensor = %Sensor{
-      sensor_id: 4,
+      sensor_id: fake_sensor_id,
       sync_function: used_sync_function
     }
     sensors = %{
@@ -803,6 +803,52 @@ defmodule Evolixir.MutationsTest do
 
     {mutation_result, _reason} = Mutations.mutate(mutation_properties)
     assert mutation_result == :error
+  end
+
+  test ":remove_inbound_connection should add a random neural inbound connection" do
+    neuron_id = 9
+    neuron_layer = 1
+    neuron = %Neuron{
+      neuron_id: neuron_id
+    }
+
+    neurons = %{
+      neuron_layer => %{
+        neuron.neuron_id => neuron
+      }
+    }
+
+    sensor_id = 3
+    sensor = %Sensor{
+      sensor_id: sensor_id
+    }
+    sensors = %{
+      sensor_id => sensor
+    }
+
+    weight = 5
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id, weight)
+    {:ok, neurons} = Neuron.connect_neurons(neurons, neuron_layer, neuron_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+    {:ok, {sensors, neurons}} = Sensor.connect_to_neuron(sensors, neurons, sensor_id, neuron_layer, neuron_id, weight)
+
+    mutation = :remove_inbound_connection
+    mutation_properties = %MutationProperties{
+      neurons: neurons,
+      sensors: sensors,
+      mutation: mutation
+    }
+
+    {:ok,{_mutated_sensors, mutated_neurons, mutated_actuators}} = Mutations.mutate(mutation_properties)
+
+    assert mutated_actuators == mutation_properties.actuators
+    assert Enum.count(mutated_neurons) == 1
+
+    mutated_neuron_structs = Map.get(mutated_neurons, neuron_layer)
+    mutated_neuron_struct = Map.get(mutated_neuron_structs, neuron_id)
+
+    assert neuron.inbound_connections != mutated_neuron_struct.inbound_connections
+    assert Neuron.has_more_than_one_inbound_connection(mutated_neurons, neuron_layer, neuron_id) == true
   end
 
   test "mutate_neural_network should mutate a neural network randomly" do

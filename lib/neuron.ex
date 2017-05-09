@@ -134,6 +134,30 @@ defmodule Neuron do
     end
   end
 
+  @spec has_more_than_one_inbound_connection(neurons, neuron_layer, neuron_id) :: bool
+  def has_more_than_one_inbound_connection(neurons, neuron_layer, neuron_id) do
+    {:ok, neuron} = get_neuron(neurons, neuron_layer, neuron_id)
+    count_connections = fn {_node_id, connections_from_node} ->
+      connections_from_node |> Enum.count
+    end
+    has_more_than_one =
+      neuron.inbound_connections
+      |> Enum.map(count_connections)
+      |> Enum.sum
+      |> (fn x -> x > 1 end).()
+    has_more_than_one
+  end
+
+  @spec has_more_than_one_outbound_connection(neurons, neuron_layer, neuron_id) :: bool
+  def has_more_than_one_outbound_connection(neurons, neuron_layer, neuron_id) do
+    {:ok, neuron} = get_neuron(neurons, neuron_layer, neuron_id)
+    has_more_than_one =
+      neuron.outbound_connections
+      |> Enum.count
+      |> (fn x -> x > 1 end).()
+    has_more_than_one
+  end
+
   defp get_highest_neuron_id([], highest_id) do
     highest_id
   end

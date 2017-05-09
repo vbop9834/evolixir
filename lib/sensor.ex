@@ -38,8 +38,10 @@ defmodule Sensor do
 
   @spec get_sensor(sensors, sensor_id) :: {:ok, sensor}
   def get_sensor(sensors, sensor_id) do
-    sensor = Map.get(sensors, sensor_id)
-    {:ok, sensor}
+    case Map.get(sensors, sensor_id, nil) do
+      nil -> {:error, "Sensor is not found"}
+      sensor -> {:ok, sensor}
+    end
   end
 
   @spec get_random_sensor(sensors) :: {:ok, sensor_id}

@@ -318,4 +318,7 @@ defmodule Evolixir.SimulationChamber do
     {:ok, scored_generation_records} = SimulationChamber.simulate(simulation_chamber_properties, generations_to_simulate)
     assert scored_generation_records != []
   end
+
+  #TODO add before_generation_function test
+
 end

@@ -10,6 +10,7 @@ defmodule SimulationChamber do
     minds_per_generation: 5,
     fitness_function: nil,
     max_attempts_to_perturb: nil,
+    before_generation_function: nil,
     end_of_generation_function: nil,
     learning_function: nil,
     think_timeout: 5000,
@@ -37,6 +38,7 @@ defmodule SimulationChamber do
   @type generations_to_simulate :: integer
 
   @type end_of_generation_function :: (scored_generation_records -> :ok)
+  @type before_generation_function :: (generation_records -> :ok)
 
   @spec think(chamber_name, think_timeout, Cortex.cortex_id) :: :ok
   defp think(chamber_name, think_timeout, cortex_id) do
@@ -130,8 +132,21 @@ defmodule SimulationChamber do
     {:ok, {score, cortex_id, neural_network}}
   end
 
+  @spec process_before_generation_function(nil, generation_records) :: :ok
+  defp process_before_generation_function(nil, _generation_records) do
+    :ok
+  end
+
+  @spec process_before_generation_function(before_generation_function, generation_records) :: :ok
+  defp process_before_generation_function(before_generation_function, generation_records) do
+    :ok = before_generation_function.(generation_records)
+    :ok
+  end
+
   @spec process_generation_simulation(simulation_chamber_properties, generation_records) :: {:ok, scored_generation_records}
   defp process_generation_simulation(simulation_chamber_properties, generation_records) do
+    #Trigger before_generation_function
+    :ok = process_before_generation_function(simulation_chamber_properties.before_generation_function, generation_records)
     #Create async tasks and await for processing each brain's think cycles and scoring the brain
     create_brain_task = fn {cortex_id, neural_network} ->
       Task.async(fn ->
